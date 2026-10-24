@@ -219,6 +219,39 @@ let offset = S.now - Date.now() / 1000; // zincir saati - cihaz saati
 const SYM = S.assetSymbol ?? "MON";
 const DEC = S.assetDecimals ?? 18;
 const amt = (raw, d = 4) => Number(formatUnits(BigInt(raw ?? 0), DEC)).toFixed(d);
+let uiSettings = {};
+try { uiSettings = JSON.parse(localStorage.getItem("coax-settings") || "{}"); } catch {}
+const DUO_SYL = ["ba", "do", "gu", "ki", "no", "şi", "vu", "zo", "mi", "ta", "lo", "pu", "ğa", "ne", "dı", "ko"];
+const duoPhrase = () => Array.from({ length: 3 + Math.floor(Math.random() * 4) }, () => DUO_SYL[Math.floor(Math.random() * DUO_SYL.length)]).join("") + (Math.random() < 0.35 ? "?" : "");
+function duoChirp() {
+  try {
+    const a = new (window.AudioContext || window.webkitAudioContext)();
+    const now = a.currentTime;
+    for (let i = 0; i < 3; i++) {
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = i % 2 ? "triangle" : "sine";
+      o.frequency.setValueAtTime(500 + Math.random() * 500, now + i * 0.08);
+      o.frequency.exponentialRampToValueAtTime(220 + Math.random() * 300, now + i * 0.08 + 0.09);
+      g.gain.setValueAtTime(0.0001, now + i * 0.08); g.gain.exponentialRampToValueAtTime(0.05, now + i * 0.08 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.08 + 0.1);
+      o.connect(g).connect(a.destination); o.start(now + i * 0.08); o.stop(now + i * 0.08 + 0.11);
+    }
+    setTimeout(() => a.close(), 600);
+  } catch {}
+}
+function duoBlab() {
+  if (!uiSettings.duo || !uiSettings.sound) return;
+  duoChirp();
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(duoPhrase());
+    u.lang = uiSettings.lang === "en" ? "en-US" : "tr-TR";
+    u.pitch = 1.55 + Math.random() * 0.55; u.rate = 1.05 + Math.random() * 0.3; u.volume = 0.8;
+    const vs = speechSynthesis.getVoices();
+    const v = vs.find((x) => x.lang?.startsWith(uiSettings.lang === "en" ? "en" : "tr")) || vs[0];
+    if (v) u.voice = v;
+    speechSynthesis.speak(u);
+  } catch {}
+}
 const chain = defineChain({ id: S.chainId, name: "Monad Testnet", nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 }, rpcUrls: { default: { http: [S.rpcUrl] } } });
 const pub = createPublicClient({ chain, transport: http() });
 const mine = new Map(); // tx hash -> mesaj (event gelene kadar)
@@ -349,6 +382,7 @@ function showPractice(message, r, label = "Pratik") {
   box.className = `presult ${r.opened ? "ok" : "no"}`;
   box.innerHTML = `<b>${r.opened ? "AÇILDI" : "RED"} · ${esc(label)}</b><div>${esc(message)}</div><div>“${esc(r.reply ?? "")}”</div>`;
   $("practice").prepend(box);
+  duoBlab();
   while ($("practice").children.length > 8) $("practice").lastChild.remove();
 }
 async function practiceOne(message, label = "Pratik") {
@@ -447,7 +481,7 @@ $("wd").onclick = async () => {
 };
 
 const STAMP = { rejected: ["RED", "no"], approved: ["KIRDI!", "yes"], skipped: ["GEÇ", "late"] };
-let overKey = null;
+let overKey = null, soundKey = `${S.cracked}|${S.total}|${S.attempts[0]?.tx ?? ""}`;
 
 function render() {
   $("contractAddr").textContent = S.contract;
@@ -480,6 +514,8 @@ function render() {
   $("lastbox").hidden = !last;
   if (last) $("lastLine").textContent = `“${last.reply}”`;
 
+  const sk = `${S.cracked}|${S.total}|${S.attempts[0]?.tx ?? ""}`;
+  if (sk !== soundKey) { soundKey = sk; if (S.cracked || S.attempts[0]?.reply) duoBlab(); }
   const key = `${S.vaultId}|${S.cracked}|${iWon}`;
   if (key !== overKey) {
     overKey = key;

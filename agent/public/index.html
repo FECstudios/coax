@@ -346,6 +346,8 @@
         <label class="f">Sayı biçimi<select id="setNum"><option value="2">2 hane</option><option value="4">4 hane</option><option value="6">6 hane</option></select></label>
       </div>
       <label class="switch"><span>Ses efektleri</span><input type="checkbox" id="setSound"></label>
+      <label class="switch"><span>Duolingo tarzı garip sesler</span><input type="checkbox" id="setDuo"></label>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn" id="duoTest" type="button">Duo sesini dene</button><small class="muted" style="align-self:center">Anlamsız heceler + tuhaf tonlar</small></div>
       <label class="switch"><span>Arka plan müziği</span><input type="checkbox" id="setMusic"></label>
       <label class="switch"><span>Titreşim / haptik geri bildirim</span><input type="checkbox" id="setHaptic"></label>
       <label class="switch"><span>Hareketi azalt (reduced motion)</span><input type="checkbox" id="setMotion"></label>
@@ -413,7 +415,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 const short = (a) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "");
 const mon = (w, d = 2) => Number(formatEther(BigInt(w))).toFixed(d);
 const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
-const toast = (t) => { $("toast").innerHTML = t; try { beep(); haptic(); } catch {} };
+const toast = (t) => { $("toast").innerHTML = t; try { settings.duo ? duoBlab() : beep(); haptic(); } catch {} };
 const abi = parseAbi([
   "function openVault(address asset, uint8 tier, uint64 duration, bytes32 promptHash) payable returns (uint256)",
   "function settle(uint256 id)",
@@ -864,7 +866,7 @@ async function loadLeaderboard() {
 }
 
 const SET_KEY = "coax-settings";
-const SETTINGS_DEFAULTS = { theme: "dark", lang: "tr", anim: "full", num: "2", sound: false, music: false, haptic: false, motion: false, skipConfirm: false, activeOnly: false, compact: false, email: "", twofa: false, publicStats: true, publicActivity: true, blocked: [], notifications: {} };
+const SETTINGS_DEFAULTS = { theme: "dark", lang: "tr", anim: "full", num: "2", sound: false, duo: false, music: false, haptic: false, motion: false, skipConfirm: false, activeOnly: false, compact: false, email: "", twofa: false, publicStats: true, publicActivity: true, blocked: [], notifications: {} };
 let settings = SETTINGS_DEFAULTS;
 function readSettings() { try { return { ...SETTINGS_DEFAULTS, ...JSON.parse(store.get(SET_KEY) || "{}") }; } catch { return { ...SETTINGS_DEFAULTS }; } }
 let actx, musicNodes = [], toastTimer;
@@ -879,6 +881,46 @@ function beep(freq = 620) {
   } catch {}
 }
 function haptic(ms = 12) { if (settings.haptic && navigator.vibrate) navigator.vibrate(ms); }
+const DUO_SYL = ["ba", "do", "gu", "ki", "no", "şi", "vu", "zo", "mi", "ta", "lo", "pu", "ğa", "ne", "dı", "ko", "rü", "ça"];
+function duoPhrase() {
+  const n = 3 + Math.floor(Math.random() * 4);
+  let s = "";
+  for (let i = 0; i < n; i++) s += DUO_SYL[Math.floor(Math.random() * DUO_SYL.length)];
+  return s + (Math.random() < 0.35 ? "?" : Math.random() < 0.2 ? "!" : "");
+}
+function duoChirp() {
+  try {
+    actx ??= new (window.AudioContext || window.webkitAudioContext)();
+    const now = actx.currentTime;
+    for (let i = 0; i < 3; i++) {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = i % 2 ? "triangle" : "sine";
+      o.frequency.setValueAtTime(500 + Math.random() * 500, now + i * 0.08);
+      o.frequency.exponentialRampToValueAtTime(200 + Math.random() * 300, now + i * 0.08 + 0.09);
+      g.gain.setValueAtTime(0.0001, now + i * 0.08);
+      g.gain.exponentialRampToValueAtTime(0.05, now + i * 0.08 + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.08 + 0.1);
+      o.connect(g).connect(actx.destination); o.start(now + i * 0.08); o.stop(now + i * 0.08 + 0.11);
+    }
+  } catch {}
+}
+function duoBlab(text, force = false) {
+  if (!force && (!settings.sound || !settings.duo)) return;
+  duoChirp();
+  try {
+    if (!("speechSynthesis" in window)) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text || duoPhrase());
+    u.lang = settings.lang === "en" ? "en-US" : "tr-TR";
+    u.pitch = 1.55 + Math.random() * 0.55;
+    u.rate = 1.05 + Math.random() * 0.3;
+    u.volume = 0.8;
+    const voices = speechSynthesis.getVoices();
+    const v = voices.find((x) => x.lang?.startsWith(settings.lang === "en" ? "en" : "tr")) || voices[0];
+    if (v) u.voice = v;
+    speechSynthesis.speak(u);
+  } catch {}
+}
 function applyMusic() {
   try {
     if (settings.music && !musicNodes.length) {
@@ -910,7 +952,7 @@ function saveSettings() {
   settings = {
     ...settings,
     theme: $("setTheme").value, lang: $("setLang").value, anim: $("setAnim").value, num: $("setNum").value,
-    sound: $("setSound").checked, music: $("setMusic").checked, haptic: $("setHaptic").checked, motion: $("setMotion").checked,
+    sound: $("setSound").checked, duo: $("setDuo").checked, music: $("setMusic").checked, haptic: $("setHaptic").checked, motion: $("setMotion").checked,
     skipConfirm: $("setSkipConfirm").checked, activeOnly: $("setActiveOnly").checked, compact: $("setCompact").checked,
     email: $("setEmail").value.trim(), twofa: $("set2fa").checked, publicStats: $("setPublicStats").checked, publicActivity: $("setPublicActivity").checked,
   };
@@ -919,7 +961,7 @@ function saveSettings() {
 }
 function fillSettings() {
   $("setTheme").value = settings.theme; $("setLang").value = settings.lang; $("setAnim").value = settings.anim; $("setNum").value = settings.num;
-  $("setSound").checked = !!settings.sound; $("setMusic").checked = !!settings.music; $("setHaptic").checked = !!settings.haptic; $("setMotion").checked = !!settings.motion;
+  $("setSound").checked = !!settings.sound; $("setDuo").checked = !!settings.duo; $("setMusic").checked = !!settings.music; $("setHaptic").checked = !!settings.haptic; $("setMotion").checked = !!settings.motion;
   $("setSkipConfirm").checked = !!settings.skipConfirm; $("setActiveOnly").checked = !!settings.activeOnly; $("setCompact").checked = !!settings.compact;
   $("setEmail").value = settings.email || ""; $("set2fa").checked = !!settings.twofa; $("setPublicStats").checked = settings.publicStats !== false; $("setPublicActivity").checked = settings.publicActivity !== false;
   for (const [k, id] of Object.entries({ daily: "notifDaily", mission: "notifMission", rank: "notifRank", friend: "notifFriend", event: "notifEvent", reward: "notifReward" })) $(id).checked = !!settings.notifications?.[k];
@@ -942,7 +984,8 @@ function renderBlocked() {
   };
 }
 settings = readSettings(); fillSettings(); applySettings();
-for (const id of ["setTheme", "setLang", "setAnim", "setNum", "setSound", "setMusic", "setHaptic", "setMotion", "setSkipConfirm", "setActiveOnly", "setCompact", "setEmail", "set2fa", "setPublicStats", "setPublicActivity"]) $(id).onchange = saveSettings;
+for (const id of ["setTheme", "setLang", "setAnim", "setNum", "setSound", "setDuo", "setMusic", "setHaptic", "setMotion", "setSkipConfirm", "setActiveOnly", "setCompact", "setEmail", "set2fa", "setPublicStats", "setPublicActivity"]) $(id).onchange = saveSettings;
+$("duoTest").onclick = () => duoBlab(null, true);
 for (const id of ["notifDaily", "notifMission", "notifRank", "notifFriend", "notifEvent", "notifReward"]) $(id).onchange = saveNotifs;
 $("notifPermission").onclick = async () => {
   if (!("Notification" in window)) return toast("Bu tarayıcı bildirimleri desteklemiyor.");
