@@ -379,7 +379,11 @@ async function practice(vaultId: number, message: string, ip: string) {
 }
 
 const PUBLIC_DIR = join(ROOT, "public");
-const MIME: Record<string, string> = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css" };
+const MIME: Record<string, string> = {
+  ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css",
+  ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon",
+  ".json": "application/json", ".txt": "text/plain; charset=utf-8", ".webmanifest": "application/manifest+json",
+};
 createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", "http://x");
   const json = (code: number, body: unknown) => { res.writeHead(code, { "Content-Type": "application/json", "Cache-Control": "no-store" }); res.end(JSON.stringify(body, (_, x) => (typeof x === "bigint" ? x.toString() : x))); };
