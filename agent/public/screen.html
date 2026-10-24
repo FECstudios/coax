@@ -112,11 +112,11 @@
 
     <div class="row">
       <div>
-        <section class="note"><div><small>KASADA DURAN ÖDÜL</small><div class="amount"><span id="pool">…</span><span>MON</span></div></div></section>
+        <section class="note"><div><small>KASADA DURAN ÖDÜL</small><div class="amount"><span id="pool">…</span><span id="poolSym">MON</span></div></div></section>
         <div class="chips">
           <span id="timer" class="sticker mono">--:--</span>
           <span id="total" class="sticker">0 SALDIRI</span>
-          <span id="feebox" class="sticker">Deneme <span id="fee" class="mono">…</span> MON</span>
+          <span id="feebox" class="sticker">Deneme <span id="fee" class="mono">…</span> <span id="feeSym">MON</span></span>
         </div>
       </div>
       <section class="qr">
@@ -157,7 +157,7 @@
     </div>
     <div class="ov">
       <h1 id="ovTitle">KASA<br><em>KIRILDI!</em></h1>
-      <section class="note"><div><small id="ovLabel">KAZANAN ALDI</small><div class="amount"><span id="ovPrize">0</span><span>MON</span></div><span id="ovWinner" class="mono"></span></div></section>
+      <section class="note"><div><small id="ovLabel">KAZANAN ALDI</small><div class="amount"><span id="ovPrize">0</span><span id="ovSym">MON</span></div><span id="ovWinner" class="mono"></span></div></section>
       <div id="ovMsg" class="ovline dark"></div>
       <div id="ovReply" class="ovline light"></div>
       <div class="ov-actions">
@@ -173,8 +173,11 @@ import { bekciSVG } from "/bekci.js";
 
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const mon = (wei, d = 2) => (Number(BigInt(wei) / 10n ** 12n) / 1e6).toFixed(d);
+let dec = 18, sym = "MON";
+const amt = (wei, d = 2) => (Number(BigInt(wei)) / 10 ** dec).toFixed(d);
 const short = (a) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+const VID = new URLSearchParams(location.search).get("v");
+const stateUrl = () => `/api/state${VID ? `?v=${encodeURIComponent(VID)}` : ""}`;
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const ACCENT = "#FFC93C";
 
@@ -278,8 +281,10 @@ async function play(item) {
 })();
 
 function ingest(next) {
-  // henüz canlı kasa yoksa "tur bitti" ekranı + YENİ TUR butonu göster
-  if (next.vaultId === null) Object.assign(next, { attempts: [], cracked: true, byTimeout: true, prize: "0", pool: "0", fee: "0", total: 0, endTime: next.now });
+  // henüz kasa yoksa "tur bitti" ekranı + YENİ TUR butonu göster
+  if (next.vaultId === null) Object.assign(next, { attempts: [], cracked: true, byTimeout: true, prize: "0", pool: "0", fee: "0", total: 0, endTime: next.now, assetSymbol: "MON", assetDecimals: 18 });
+  dec = next.assetDecimals ?? 18;
+  sym = next.assetSymbol ?? "MON";
   if (next.vaultId !== contract) {
     // yeni tur (ya da sayfa yeni açıldı): eski cevapları baştan oynatma
     contract = next.vaultId;
@@ -324,7 +329,8 @@ function maybeOverlay() {
     $("ovReply").innerHTML = `<b>YAKIŞIKLI GÜVENLİK (${esc(S.model ?? "?")}):</b> “${esc(w?.reply ?? "…")}”`;
     $("ovMascot").innerHTML = SVG.kandirildi;
   }
-  $("ovPrize").textContent = mon(S.prize);
+  $("ovPrize").textContent = amt(S.prize);
+  $("ovSym").textContent = sym;
   $("restart").disabled = S.restarting;
   $("restartLabel").textContent = S.restarting ? "BAŞLATILIYOR…" : "YENİ TUR";
   $("overlay").classList.add("on");
@@ -348,8 +354,10 @@ function render() {
     $("scenName").textContent = S.scenario.name;
     $("scenTag").textContent = S.scenario.tagline;
   }
-  $("pool").textContent = mon(S.pool);
-  $("fee").textContent = mon(S.fee, 4);
+  $("poolSym").textContent = sym;
+  $("feeSym").textContent = sym;
+  $("pool").textContent = amt(S.pool);
+  $("fee").textContent = amt(S.fee, 4);
   $("total").textContent = `${S.total} SALDIRI`;
   const left = Math.max(0, S.endTime - Math.floor(Date.now() / 1000 + offset));
   $("timer").textContent = left ? `${String(Math.floor(left / 60)).padStart(2, "0")}:${String(left % 60).padStart(2, "0")}` : "BİTTİ";
@@ -363,7 +371,7 @@ function render() {
 
 async function tick() {
   try {
-    const next = await (await fetch("/api/state")).json();
+    const next = await (await fetch(stateUrl())).json();
     offset = next.now - Date.now() / 1000; // zincir saati - cihaz saati (bu laptop 3 saat ileri)
     ingest(next);
     render();

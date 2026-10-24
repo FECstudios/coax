@@ -207,6 +207,20 @@ function maybeSettle() {
 
 // ---------- canlı tur: agent'ın açtığı kasa ----------
 const liveId = () => [...vaults.values()].filter((v) => v.host.toLowerCase() === account.address.toLowerCase()).at(-1)?.id ?? null;
+
+// Büyük ekran / QR için kasa seçimi: önce yeni sonuçlanan kasa (sonuç ekranı görünsün),
+// sonra en son hareket gören aktif kasa (kim açtıysa), en son da son kasa.
+function featuredId() {
+  const now = chainNow();
+  const all = [...vaults.values()];
+  const recentSettled = all.filter((v) => v.settled && v.endBlock && (blockTime.get(v.endBlock) ?? 0) > now - 30)
+    .sort((a, b) => (blockTime.get(b.endBlock!) ?? 0) - (blockTime.get(a.endBlock!) ?? 0))[0];
+  if (recentSettled) return recentSettled.id;
+  const heat = (v: Vault) => Math.max(blockTime.get(v.openedBlock) ?? 0, ...v.attempts.map((i) => blockTime.get(attempts.get(i)!.block) ?? 0));
+  const active = all.filter((v) => !v.settled && v.endsAt > now).sort((a, b) => heat(b) - heat(a) || b.id - a.id);
+  if (active.length) return active[0].id;
+  return all.sort((a, b) => b.id - a.id)[0]?.id ?? null;
+}
 let restarting = false;
 async function restart() {
   const cur = liveId();
@@ -389,7 +403,7 @@ createServer(async (req, res) => {
   const json = (code: number, body: unknown) => { res.writeHead(code, { "Content-Type": "application/json", "Cache-Control": "no-store" }); res.end(JSON.stringify(body, (_, x) => (typeof x === "bigint" ? x.toString() : x))); };
   try {
     if (url.pathname === "/api/vaults") return json(200, vaultsApi());
-    if (url.pathname === "/api/state") { const v = url.searchParams.get("v"); return json(200, stateApi(v === null || v === "" ? liveId() : Number(v))); }
+    if (url.pathname === "/api/state") { const v = url.searchParams.get("v"); return json(200, stateApi(v === null || v === "" ? featuredId() : Number(v))); }
     if (url.pathname === "/api/account") return json(200, accountApi(String(url.searchParams.get("a") ?? "")));
     if (url.pathname === "/api/leaderboard") return json(200, leaderboardApi());
     if (url.pathname === "/api/drip" && req.method === "POST") {
@@ -409,7 +423,8 @@ createServer(async (req, res) => {
     if (url.pathname === "/qr.svg") {
       const base = cfg.publicUrl ?? `http://${req.headers.host}/`;
       const text = url.searchParams.get("text");
-      const target = text && text.length <= 300 ? text : new URL(`play.html?v=${liveId() ?? ""}`, base).toString();
+      const qv = url.searchParams.get("v");
+      const target = text && text.length <= 300 ? text : new URL(`play.html?v=${qv || featuredId() || ""}`, base).toString();
       res.writeHead(200, { "Content-Type": "image/svg+xml", "Cache-Control": "no-store" });
       return res.end(await QRCode.toString(target, { type: "svg", margin: 1 }));
     }
