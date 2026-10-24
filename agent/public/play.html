@@ -109,7 +109,7 @@
 <section class="note">
   <div>
     <small>KASADA DURAN ÖDÜL</small>
-    <div class="amount"><span id="pool">…</span><span>MON</span></div>
+    <div class="amount"><span id="pool">…</span><span id="poolSym">MON</span></div>
     <p>Yakışıklı Güvenlik'i ikna et, hepsi saniyesinde senin cüzdanında.</p>
   </div>
   <div id="mascot" role="img" aria-label="Yakışıklı Güvenlik"></div>
@@ -117,7 +117,8 @@
 
 <div class="chips">
   <span id="timer" class="mono">--:--</span>
-  <span class="feechip">Deneme <span id="fee">…</span> MON</span>
+  <span class="feechip">Deneme <span id="fee">…</span> <span id="feeSym">MON</span></span>
+  <span id="assetBal" class="mono" hidden>…</span>
   <span id="total"></span>
 </div>
 
@@ -192,12 +193,18 @@
 <footer>Monad Testnet · Testnet MON gerçek para değildir</footer>
 
 <script type="module">
-import { createPublicClient, createWalletClient, custom, defineChain, formatEther, getAddress, http, isAddress, parseAbi } from "https://esm.sh/viem@2.57.5";
+import { createPublicClient, createWalletClient, custom, defineChain, formatEther, formatUnits, getAddress, http, isAddress, parseAbi } from "https://esm.sh/viem@2.57.5";
 import { generatePrivateKey, privateKeyToAccount } from "https://esm.sh/viem@2.57.5/accounts";
 import { bekciSVG } from "/bekci.js";
 
 const $ = (id) => document.getElementById(id);
 const abi = parseAbi(["function attempt(uint256 id, string message) payable returns (uint256)"]);
+const erc20 = parseAbi([
+  "function balanceOf(address) view returns (uint256)",
+  "function allowance(address owner, address spender) view returns (uint256)",
+  "function approve(address spender, uint256 amount) returns (bool)",
+]);
+const NATIVE = "0x0000000000000000000000000000000000000000";
 const enc = new TextEncoder();
 const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -209,6 +216,9 @@ const stateUrl = () => `/api/state?v=${VID}`;
 let S = await (await fetch(stateUrl())).json();
 if (S.vaultId === null) document.body.innerHTML = `<p style="padding:24px">Bu kasa bulunamadı. <a href="/">Keşfet’e dön</a></p>`;
 let offset = S.now - Date.now() / 1000; // zincir saati - cihaz saati
+const SYM = S.assetSymbol ?? "MON";
+const DEC = S.assetDecimals ?? 18;
+const amt = (raw, d = 4) => Number(formatUnits(BigInt(raw ?? 0), DEC)).toFixed(d);
 const chain = defineChain({ id: S.chainId, name: "Monad Testnet", nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 }, rpcUrls: { default: { http: [S.rpcUrl] } } });
 const pub = createPublicClient({ chain, transport: http() });
 const mine = new Map(); // tx hash -> mesaj (event gelene kadar)
@@ -306,11 +316,16 @@ async function refreshBalance() {
   const [bal, bbal] = await Promise.all([pub.getBalance({ address: me.address }), pub.getBalance({ address: burner.address })]);
   $("bal").textContent = Number(formatEther(bal)).toFixed(3);
   $("bbal").textContent = Number(formatEther(bbal)).toFixed(3);
+  if (S.vaultId !== null && !S.native) {
+    const tok = await pub.readContract({ address: S.asset, abi: erc20, functionName: "balanceOf", args: [me.address] });
+    $("assetBal").hidden = false;
+    $("assetBal").textContent = `${amt(tok, 4)} ${SYM}`;
+  }
   return bal;
 }
 async function ensureFunds() {
   const bal = await refreshBalance();
-  if (bal >= BigInt(S.fee) * 3n) return;
+  if (S.native ? bal >= BigInt(S.fee) * 3n : bal >= 10_000_000_000_000_000n) return;
   $("status").textContent = "Musluktan MON isteniyor...";
   const r = await (await fetch("/api/drip", { method: "POST", body: JSON.stringify({ address: me.address }) })).json();
   $("status").textContent = r.ok ? "MON geldi, saldırabilirsin." : `Musluk: ${r.reason}`;
@@ -375,10 +390,25 @@ $("send").onclick = async () => {
   try {
     if (me.address.toLowerCase() === (S.host ?? "").toLowerCase()) { $("status").textContent = "Kendi kasana deneme gönderemezsin."; return; }
     const value = BigInt(S.fee);
-    if ((await pub.getBalance({ address: me.address })) < value + 20_000_000_000_000_000n) { $("status").textContent = "Bakiye yetersiz."; return; }
+    const nativeBal = await pub.getBalance({ address: me.address });
+    if (S.native) {
+      if (nativeBal < value + 20_000_000_000_000_000n) { $("status").textContent = "Bakiye yetersiz."; return; }
+    } else {
+      const [tokenBal, allowance] = await Promise.all([
+        pub.readContract({ address: S.asset, abi: erc20, functionName: "balanceOf", args: [me.address] }),
+        pub.readContract({ address: S.asset, abi: erc20, functionName: "allowance", args: [me.address, S.contract] }),
+      ]);
+      if (tokenBal < value) { $("status").textContent = `${SYM} bakiyesi yetersiz.`; return; }
+      if (nativeBal < 10_000_000_000_000_000n) { $("status").textContent = "Gas için biraz MON gerekiyor."; return; }
+      if (allowance < value) {
+        $("status").textContent = me.kind === "burner" ? `${SYM} onayı gönderiliyor...` : `Cüzdanında ${SYM} onayı ver...`;
+        const ah = await me.wallet.writeContract({ address: S.asset, abi: erc20, functionName: "approve", args: [S.contract, value * 10n] });
+        await pub.waitForTransactionReceipt({ hash: ah });
+      }
+    }
     try {
-      $("status").textContent = me.kind === "burner" ? `Gönderiliyor (ücret ${Number(formatEther(value)).toFixed(4)} MON)...` : "Cüzdanında onayla...";
-      const hash = await me.wallet.writeContract({ address: S.contract, abi, functionName: "attempt", args: [BigInt(S.vaultId), message], value });
+      $("status").textContent = me.kind === "burner" ? `Gönderiliyor (ücret ${amt(value, 6)} ${SYM})...` : "Cüzdanında onayla...";
+      const hash = await me.wallet.writeContract({ address: S.contract, abi, functionName: "attempt", args: [BigInt(S.vaultId), message], value: S.native ? value : 0n });
       mine.set(hash.toLowerCase(), message);
       $("msg").value = ""; $("count").textContent = "0/500";
       $("status").innerHTML = `Gönderildi, düşünüyor... <a target="_blank" href="${S.explorerTx}${hash}">tx</a>`;
@@ -426,8 +456,10 @@ function render() {
   $("contractLink").href = S.explorerTx.replace(/tx\/?$/, "address/") + S.contract;
   $("scen").hidden = !S.scenario;
   if (S.scenario) { $("scenName").textContent = S.scenario.name; $("scenTag").textContent = S.scenario.tagline; }
-  $("pool").textContent = Number(formatEther(BigInt(S.pool))).toFixed(2);
-  $("fee").textContent = Number(formatEther(BigInt(S.fee))).toFixed(4);
+  $("pool").textContent = amt(S.pool, 2);
+  $("poolSym").textContent = SYM;
+  $("fee").textContent = amt(S.fee, 6);
+  $("feeSym").textContent = SYM;
   $("total").textContent = `${S.total} saldırı yapıldı`;
   const left = Math.max(0, S.endTime - Math.floor(Date.now() / 1000 + offset));
   $("timer").textContent = left ? `${String(Math.floor(left / 60)).padStart(2, "0")}:${String(left % 60).padStart(2, "0")}` : "BİTTİ";
@@ -455,11 +487,11 @@ function render() {
       $("over").innerHTML = "";
       $("send").disabled = false;
     } else {
-      const prize = Number(formatEther(BigInt(S.prize))).toFixed(2);
+      const prize = amt(S.prize, 2);
       $("over").innerHTML = `<section class="card over">
         <div class="mascot-big">${bekciSVG(S.byTimeout ? "bekliyor" : "kandirildi", ACCENT)}</div>
         <div class="big">${iWon ? "KIRDIN!" : S.byTimeout ? "SÜRE DOLDU" : "KASA KIRILDI"}</div>
-        <p>${iWon ? `+${prize} MON cüzdanına gitti. Aşağıdan kendi cüzdanına alabilirsin.` : S.byTimeout ? "Kimse kıramadı, havuz kasada kaldı." : `${short(S.winner)} kırdı ve ${prize} MON aldı.`}</p>
+        <p>${iWon ? `+${prize} ${SYM} cüzdanına gitti. Aşağıdan kendi cüzdanına alabilirsin.` : S.byTimeout ? "Kimse kıramadı, havuz kasada kaldı." : `${short(S.winner)} kırdı ve ${prize} ${SYM} aldı.`}</p>
         <p>Modeli: ${esc(S.model)}</p>
         <a class="btn2 wl" href="${S.explorerTx.replace(/tx\/?$/, "address/")}${iWon ? me.address : S.winner ?? me.address}" target="_blank" rel="noopener">Cüzdanda görüntüle</a>
       </section>`;

@@ -5,7 +5,7 @@
   <img src="docs/guard-cracked.svg" width="180" alt="Yakışıklı Güvenlik kandırıldı">
 </p>
 
-**Talk the vault open.** An AI guard protects a pool of MON. Pay a few cents per message and try to convince it to open the vault. If it agrees, the whole pool goes to you in the same transaction.
+**Talk the vault open.** An AI guard protects a pool of MON, USDC, WETH or WMON. Pay a small fee per message and try to convince it to open the vault. If it agrees, the whole pool goes to you in the same transaction.
 
 Built in one day at **Monad Blitz Ankara v4** · runs on **Monad Testnet**.
 

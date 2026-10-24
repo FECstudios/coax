@@ -5,9 +5,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, normalize } from "node:path";
 import QRCode from "qrcode";
-import { encodeFunctionData, formatEther, isAddress, keccak256, toHex, type Hex, type TransactionReceipt } from "viem";
+import { encodeFunctionData, formatUnits, isAddress, keccak256, toHex, type Hex, type TransactionReceipt } from "viem";
 import { askGuard, judgeWithJev, pickGuardModel } from "./ai.ts";
-import { account, cfg, COAX_PATH, coaxAbi as abi, coaxCfg, makeClients, ROOT, scenarioByHash, scenarios, type CoaxDeployment } from "./config.ts";
+import { account, cfg, COAX_PATH, coaxAbi as abi, coaxCfg, makeClients, ROOT, scenarioByHash, scenarios, tokenByAddress, tokens, type CoaxDeployment } from "./config.ts";
 
 if (!existsSync(COAX_PATH)) throw new Error("coax.json yok: önce `node src/coax-deploy.ts`");
 const dep: CoaxDeployment = JSON.parse(readFileSync(COAX_PATH, "utf8"));
@@ -16,14 +16,17 @@ if (chain.id !== dep.chainId) throw new Error("chain uyuşmuyor");
 if (!cfg.mockAi && !cfg.aiKey) throw new Error("HACKCLUB_API_KEY eksik (ya da MOCK_AI=1)");
 console.log(`CoaxVaults ${dep.address} chain ${chain.id}`);
 
-type Attempt = { id: number; vault: number; player: Hex; message: string; paid: string; tx: Hex; block: number; status: "pending" | "rejected" | "approved" | "skipped"; reply?: string };
+type Attempt = { id: number; vault: number; player: Hex; message: string; paid: bigint; tx: Hex; block: number; status: "pending" | "rejected" | "approved" | "skipped"; reply?: string };
 type Vault = {
-  id: number; host: Hex; tier: number; endsAt: number; promptHash: Hex; deposit: bigint; pool: bigint; attempts: number[];
+  id: number; host: Hex; tier: number; endsAt: number; promptHash: Hex; deposit: bigint; pool: bigint; attempts: number[]; asset: Hex;
   settled: boolean; winner: Hex | null; byTimeout: boolean; prize: bigint; winningId: number | null; model?: string; openedBlock: number; openedTx: Hex; endTx?: Hex; endBlock?: number;
 };
 const vaults = new Map<number, Vault>();
 const attempts = new Map<number, Attempt>();
-const fee = (tier: number) => coaxCfg.fees[tier - 1];
+const tokenOf = (asset: string) => tokenByAddress(asset) ?? tokens[0];
+const fee = (asset: string, tier: number) => tokenOf(asset).fees[tier - 1] ?? 0n;
+const fmt = (asset: string, raw: bigint, digits = 2) => Number(formatUnits(raw, tokenOf(asset).decimals)).toFixed(digits);
+const assetMeta = (asset: string) => { const t = tokenOf(asset); return { asset: t.address, assetSymbol: t.symbol, assetDecimals: t.decimals }; };
 
 // ---------- zaman: yerel saate güvenme, zincir saati ----------
 let clockOffset = 0, clockAt = 0;
@@ -62,13 +65,13 @@ async function apply(log: { eventName: string; args: any; transactionHash: Hex; 
   const a = log.args, block = Number(log.blockNumber);
   if (log.eventName === "VaultOpened") {
     const id = Number(a.id);
-    vaults.set(id, { id, host: a.host, tier: Number(a.tier), endsAt: Number(a.endsAt), promptHash: a.promptHash, deposit: a.deposit, pool: a.deposit, attempts: [], settled: false, winner: null, byTimeout: false, prize: 0n, winningId: null, openedBlock: block, openedTx: log.transactionHash });
+    vaults.set(id, { id, host: a.host, tier: Number(a.tier), endsAt: Number(a.endsAt), promptHash: a.promptHash, deposit: a.deposit, pool: a.deposit, attempts: [], asset: a.asset, settled: false, winner: null, byTimeout: false, prize: 0n, winningId: null, openedBlock: block, openedTx: log.transactionHash });
     await timeOf(block);
-    console.log(`kasa #${id} açıldı (${scenarioByHash(a.promptHash)?.id}, seviye ${a.tier}) host ${a.host.slice(0, 8)}`);
+    console.log(`kasa #${id} açıldı (${scenarioByHash(a.promptHash)?.id}, seviye ${a.tier}, ${tokenOf(a.asset).symbol}) host ${a.host.slice(0, 8)}`);
   } else if (log.eventName === "Attempted") {
     const id = Number(a.attemptId), v = vaults.get(Number(a.id));
     if (!v) return;
-    attempts.set(id, { id, vault: v.id, player: a.player, message: a.message, paid: formatEther(a.fee), tx: log.transactionHash, block, status: "pending" });
+    attempts.set(id, { id, vault: v.id, player: a.player, message: a.message, paid: a.fee, tx: log.transactionHash, block, status: "pending" });
     v.attempts.push(id);
     v.pool += a.fee - (a.fee * 500n) / 10_000n;
     await timeOf(block);
@@ -96,7 +99,7 @@ async function apply(log: { eventName: string; args: any; transactionHash: Hex; 
       v.winner = a.host;
     }
     for (const i of v.attempts) { const t = attempts.get(i)!; if (t.status === "pending") t.status = "skipped"; }
-    console.log(`kasa #${v.id} ${log.eventName === "Cracked" ? "KIRILDI" : "dayandı"} → ${formatEther(a.amount)} MON`);
+    console.log(`kasa #${v.id} ${log.eventName === "Cracked" ? "KIRILDI" : "dayandı"} → ${fmt(v.asset, a.amount, 4)} ${tokenOf(v.asset).symbol}`);
   }
 }
 
@@ -214,7 +217,7 @@ async function restart() {
     const s = scenarios[Math.floor(Math.random() * scenarios.length)];
     const hash = await sendTx({
       prio: 0, order: taskOrder++, label: `canlı tur (${s.id})`, to: dep.address, value: coaxCfg.deposits[coaxCfg.liveTier - 1],
-      data: encodeFunctionData({ abi, functionName: "openVault", args: [coaxCfg.liveTier, BigInt(cfg.durationSec), s.hash] }),
+      data: encodeFunctionData({ abi, functionName: "openVault", args: [tokens[0].address, coaxCfg.liveTier, BigInt(cfg.durationSec), s.hash] }),
     });
     if (!hash) return { ok: false, reason: "işlem gönderilemedi" };
     await publicClient.waitForTransactionReceipt({ hash });
@@ -241,12 +244,19 @@ async function drip(address: string) {
 }
 
 // ---------- API ----------
-const common = () => ({ contract: dep.address, chainId: chain.id, rpcUrl: cfg.publicRpcUrl, explorerTx: cfg.explorerTx, now: chainNow() });
+const common = () => ({
+  contract: dep.address, chainId: chain.id, rpcUrl: cfg.publicRpcUrl, explorerTx: cfg.explorerTx, now: chainNow(),
+  assets: tokens.map((t) => ({
+    address: t.address, symbol: t.symbol, decimals: t.decimals,
+    tiers: { 1: { deposit: t.deposits[0].toString(), fee: t.fees[0].toString() }, 2: { deposit: t.deposits[1].toString(), fee: t.fees[1].toString() } },
+  })),
+});
 const scen = (h: Hex) => { const s = scenarioByHash(h); return s ? { id: s.id, name: s.name, tagline: s.tagline } : null; };
 function vaultSummary(v: Vault) {
   return {
     id: v.id, host: v.host, tier: v.tier, endsAt: v.endsAt, scenario: scen(v.promptHash), promptHash: v.promptHash,
-    deposit: v.deposit.toString(), pool: v.pool.toString(), fee: fee(v.tier).toString(), attempts: v.attempts.length,
+    ...assetMeta(v.asset),
+    deposit: v.deposit.toString(), pool: v.pool.toString(), fee: fee(v.asset, v.tier).toString(), attempts: v.attempts.length,
     settled: v.settled, winner: v.winner, byTimeout: v.byTimeout, prize: v.prize.toString(), live: v.host.toLowerCase() === account.address.toLowerCase(),
     openedAt: blockTime.get(v.openedBlock) ?? null, openedTx: v.openedTx, endTx: v.endTx ?? null,
   };
@@ -255,13 +265,15 @@ function vaultsApi() {
   const now = chainNow(), day = now - 86400;
   const list = [...vaults.values()].reverse();
   const recent = list.filter((v) => v.settled && v.endBlock).sort((a, b) => b.endBlock! - a.endBlock!).slice(0, 15)
-    .map((v) => ({ vault: v.id, kind: v.byTimeout ? "held" : "cracked", who: v.winner, amount: v.prize.toString(), time: blockTime.get(v.endBlock!) ?? null, tx: v.endTx }));
+    .map((v) => ({ vault: v.id, kind: v.byTimeout ? "held" : "cracked", who: v.winner, ...assetMeta(v.asset), amount: v.prize.toString(), time: blockTime.get(v.endBlock!) ?? null, tx: v.endTx }));
+  const tvl: Record<string, string> = {};
+  for (const t of tokens) tvl[t.symbol] = list.filter((v) => !v.settled && v.asset.toLowerCase() === t.address.toLowerCase()).reduce((s, v) => s + v.pool, 0n).toString();
   return {
     ...common(), liveId: liveId(),
     tiers: { 1: { deposit: coaxCfg.deposits[0].toString(), fee: coaxCfg.fees[0].toString() }, 2: { deposit: coaxCfg.deposits[1].toString(), fee: coaxCfg.fees[1].toString() } },
     scenarios: scenarios.map((s) => ({ id: s.id, name: s.name, tagline: s.tagline, hash: s.hash })),
     stats: {
-      tvl: list.filter((v) => !v.settled).reduce((s, v) => s + v.pool, 0n).toString(),
+      tvl,
       active: list.filter((v) => !v.settled && v.endsAt > now).length,
       attempts24h: [...attempts.values()].filter((a) => (blockTime.get(a.block) ?? 0) > day).length,
       cracked24h: list.filter((v) => v.settled && !v.byTimeout && (blockTime.get(v.endBlock!) ?? 0) > day).length,
@@ -275,7 +287,8 @@ function stateApi(id: number | null) {
   if (!v) return { ...common(), vaultId: null, restarting };
   return {
     ...common(), vaultId: v.id, host: v.host, tier: v.tier, scenario: scen(v.promptHash), promptHash: v.promptHash,
-    endTime: v.endsAt, fee: fee(v.tier).toString(), pool: (v.settled ? v.prize : v.pool).toString(), total: v.attempts.length,
+    ...assetMeta(v.asset), native: v.asset === tokens[0].address,
+    endTime: v.endsAt, fee: fee(v.asset, v.tier).toString(), pool: (v.settled ? v.prize : v.pool).toString(), total: v.attempts.length,
     cracked: v.settled, byTimeout: v.byTimeout, winner: v.winner, prize: v.prize.toString(), winningId: v.winningId,
     model: v.settled ? v.model ?? null : null, restarting, live: v.host.toLowerCase() === account.address.toLowerCase(),
     attempts: [...v.attempts].reverse().slice(0, 150).map((i) => attempts.get(i)!),
@@ -283,35 +296,48 @@ function stateApi(id: number | null) {
 }
 function accountApi(addr: string) {
   const me = addr.toLowerCase(), rows: any[] = [];
-  if (!isAddress(addr)) return { ...common(), locked: "0", history: [], hosted: [], myAttempts: [], hostEarnings: "0", hostedSettled: 0, hostedHeld: 0 };
+  const zero = () => Object.fromEntries(tokens.map((t) => [t.symbol, "0"]));
+  if (!isAddress(addr)) return { ...common(), locked: zero(), history: [], hosted: [], myAttempts: [], hostEarnings: zero(), hostedSettled: 0, hostedHeld: 0 };
   const myAttempts = [...attempts.values()].filter((a) => a.player.toLowerCase() === me)
     .sort((a, b) => (blockTime.get(b.block) ?? 0) - (blockTime.get(a.block) ?? 0))
-    .map((a) => ({ ...a, time: blockTime.get(a.block) ?? null, vaultPrize: vaults.get(a.vault)?.prize.toString() ?? "0" }));
-  for (const a of myAttempts) rows.push({ kind: "attempt", vault: a.vault, amount: `-${a.paid}`, status: a.status, time: a.time, tx: a.tx });
+    .map((a) => {
+      const v = vaults.get(a.vault);
+      return { ...a, ...assetMeta(v?.asset ?? tokens[0].address), time: blockTime.get(a.block) ?? null, vaultPrize: v?.prize.toString() ?? "0" };
+    });
+  for (const a of myAttempts) rows.push({ kind: "attempt", vault: a.vault, ...assetMeta(a.asset), amount: `-${fmt(a.asset, a.paid, 6)}`, status: a.status, time: a.time, tx: a.tx });
   const hosted = [...vaults.values()].filter((v) => v.host.toLowerCase() === me).reverse();
-  let hostEarnings = 0n, hostedSettled = 0, hostedHeld = 0;
+  const hostEarnings = zero();
+  let hostedSettled = 0, hostedHeld = 0;
   for (const v of hosted) {
-    if (v.settled) { hostedSettled++; if (v.byTimeout) { hostedHeld++; hostEarnings += v.prize; } }
+    if (v.settled) {
+      hostedSettled++;
+      if (v.byTimeout) {
+        hostedHeld++;
+        const sym = tokenOf(v.asset).symbol;
+        hostEarnings[sym] = (BigInt(hostEarnings[sym]) + v.prize).toString();
+      }
+    }
   }
   for (const v of vaults.values()) {
-    if (v.host.toLowerCase() === me) rows.push({ kind: "deposit", vault: v.id, amount: `-${formatEther(v.deposit)}`, status: v.settled ? "done" : "locked", time: blockTime.get(v.openedBlock) ?? null, tx: v.openedTx });
-    if (v.settled && v.winner?.toLowerCase() === me && v.endTx) rows.push({ kind: v.byTimeout ? "hostReturn" : "prize", vault: v.id, amount: `+${formatEther(v.prize)}`, status: "done", time: blockTime.get(v.endBlock!) ?? null, tx: v.endTx });
+    if (v.host.toLowerCase() === me) rows.push({ kind: "deposit", vault: v.id, ...assetMeta(v.asset), amount: `-${fmt(v.asset, v.deposit, 6)}`, status: v.settled ? "done" : "locked", time: blockTime.get(v.openedBlock) ?? null, tx: v.openedTx });
+    if (v.settled && v.winner?.toLowerCase() === me && v.endTx) rows.push({ kind: v.byTimeout ? "hostReturn" : "prize", vault: v.id, ...assetMeta(v.asset), amount: `+${fmt(v.asset, v.prize, 6)}`, status: "done", time: blockTime.get(v.endBlock!) ?? null, tx: v.endTx });
   }
   rows.sort((a, b) => (b.time ?? 0) - (a.time ?? 0));
-  const locked = hosted.filter((v) => !v.settled).reduce((s, v) => s + v.pool, 0n);
+  const locked = zero();
+  for (const v of hosted) if (!v.settled) { const sym = tokenOf(v.asset).symbol; locked[sym] = (BigInt(locked[sym]) + v.pool).toString(); }
   return {
-    ...common(), locked: locked.toString(), history: rows.slice(0, 200), hosted: hosted.map(vaultSummary),
-    myAttempts: myAttempts.slice(0, 200).map(({ id, vault, message, reply, status, time, tx, paid, vaultPrize }) => ({ id, vault, message, reply: reply ?? null, status, time, tx, paid, vaultPrize })),
-    hostEarnings: hostEarnings.toString(), hostedSettled, hostedHeld,
+    ...common(), locked, history: rows.slice(0, 200), hosted: hosted.map(vaultSummary),
+    myAttempts: myAttempts.slice(0, 200).map(({ id, vault, message, reply, status, time, tx, paid, vaultPrize, asset, assetSymbol, assetDecimals }) => ({ id, vault, message, reply: reply ?? null, status, time, tx, paid, vaultPrize, asset, assetSymbol, assetDecimals })),
+    hostEarnings, hostedSettled, hostedHeld,
   };
 }
 
 function leaderboardApi() {
-  type Row = { address: string; attempts: number; cracked: number; prize: bigint; hosted: number; held: number };
+  type Row = { address: string; attempts: number; cracked: number; prizes: Record<string, bigint>; hosted: number; held: number };
   const map = new Map<string, Row>();
   const get = (a: string) => {
     const k = a.toLowerCase();
-    if (!map.has(k)) map.set(k, { address: k, attempts: 0, cracked: 0, prize: 0n, hosted: 0, held: 0 });
+    if (!map.has(k)) map.set(k, { address: k, attempts: 0, cracked: 0, prizes: Object.fromEntries(tokens.map((t) => [t.symbol, 0n])), hosted: 0, held: 0 });
     return map.get(k)!;
   };
   for (const a of attempts.values()) {
@@ -323,12 +349,12 @@ function leaderboardApi() {
     const h = get(v.host);
     h.hosted++;
     if (v.settled && v.byTimeout) h.held++;
-    if (v.settled && v.winner) get(v.winner).prize += v.byTimeout ? 0n : v.prize;
+    if (v.settled && v.winner && !v.byTimeout) { const sym = tokenOf(v.asset).symbol; get(v.winner).prizes[sym] += v.prize; }
   }
   return {
     ...common(),
-    top: [...map.values()].sort((a, b) => Number(b.prize - a.prize) || b.cracked - a.cracked || a.attempts - b.attempts).slice(0, 20)
-      .map((r) => ({ address: r.address, attempts: r.attempts, cracked: r.cracked, prize: r.prize.toString(), hosted: r.hosted, held: r.held })),
+    top: [...map.values()].sort((a, b) => b.cracked - a.cracked || b.attempts - a.attempts).slice(0, 20)
+      .map((r) => ({ address: r.address, attempts: r.attempts, cracked: r.cracked, prizes: Object.fromEntries(Object.entries(r.prizes).map(([k, v]) => [k, v.toString()])), hosted: r.hosted, held: r.held })),
   };
 }
 

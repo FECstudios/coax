@@ -16,6 +16,8 @@
   header .wrap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding-top: 12px; padding-bottom: 12px; }
   .logo { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: 0.02em; margin-right: auto; color: var(--text); text-decoration: none; }
   .chip { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 4px 10px; font-size: 13px; white-space: nowrap; }
+  button.chip { cursor: pointer; font: inherit; font-size: 13px; color: var(--text); }
+  button.chip:hover { border-color: var(--gold); }
   .net { color: var(--green); }
   nav.tabs { position: fixed; bottom: 0; left: 0; right: 0; z-index: 3; display: grid; grid-template-columns: repeat(4, 1fr); background: var(--card); border-top: 1px solid var(--line); }
   nav.tabs button { background: none; border: 0; color: var(--muted); font: 600 14px Inter, sans-serif; padding: 16px 8px; cursor: pointer; }
@@ -48,7 +50,7 @@
   .opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
   .opt { position: relative; }
   .opt input { position: absolute; opacity: 0; }
-  .opt span { display: block; height: 100%; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; cursor: pointer; }
+  .opt > span { display: block; height: 100%; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; cursor: pointer; }
   .opt input:checked + span { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
   .opt input:focus-visible + span { outline: 2px solid #8EA8FF; }
   .sum div { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; }
@@ -85,7 +87,7 @@
   <a class="logo" href="/">COAXER</a>
   <span class="chip net">● Monad Testnet</span>
   <span class="chip mono" id="balChip">… MON</span>
-  <span class="chip mono" id="addrChip">…</span>
+  <button class="chip mono" id="addrChip" type="button" title="Cüzdanı bağla veya değiştir">…</button>
 </div></header>
 <nav class="tabs" role="tablist">
   <button role="tab" data-tab="explore" aria-selected="true">Keşfet</button>
@@ -99,7 +101,7 @@
 
   <section id="explore">
     <div class="grid4" style="margin-top: 8px">
-      <div class="card metric"><small>Toplam kilitli değer</small><b id="mTvl">…</b> <span class="muted">MON</span></div>
+      <div class="card metric"><small>Toplam kilitli değer</small><b id="mTvl" style="font-size: 16px">…</b></div>
       <div class="card metric"><small>Aktif kasa</small><b id="mActive">…</b></div>
       <div class="card metric"><small>Son 24 saatte deneme</small><b id="mAtt">…</b></div>
       <div class="card metric"><small>Son 24 saatte kırılan</small><b id="mCracked">…</b></div>
@@ -120,15 +122,17 @@
   </section>
 
   <section id="open" hidden>
-    <h2>1. Seviye</h2>
+    <h2>1. Para birimi</h2>
+    <label class="f">Kasa hangi varlıkla açılsın?<select id="asset"></select></label>
+    <h2>2. Seviye</h2>
     <div class="opts" id="tierOpts"></div>
-    <h2>2. Süre</h2>
+    <h2>3. Süre</h2>
     <div class="opts">
       <label class="opt"><input type="radio" name="dur" value="1800"><span><b>30 dk</b></span></label>
       <label class="opt"><input type="radio" name="dur" value="7200" checked><span><b>2 saat</b></span></label>
       <label class="opt"><input type="radio" name="dur" value="86400"><span><b>24 saat</b></span></label>
     </div>
-    <h2>3. Kişilik</h2>
+    <h2>4. Kişilik</h2>
     <label class="f">Yakışıklı Güvenlik'in kişiliği (sistem prompt'u platformun şablonundan gelir)<select id="persona"></select></label>
     <p class="muted" id="personaTag" style="margin: 6px 0 0"></p>
     <h2>Özet</h2>
@@ -145,14 +149,31 @@
   </section>
 
   <section id="wallet" hidden>
+    <div class="card" style="margin-top: 8px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: space-between">
+      <div style="flex: 1; min-width: 200px">
+        <b>Hesabın</b>
+        <div class="mono muted" style="font-size: 13px; word-break: break-all" id="connAddr">…</div>
+        <span class="badge" id="connKind">Otomatik cüzdan</span>
+      </div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center">
+        <button class="btn primary" id="connect" type="button">Kendi cüzdanınla bağlan</button>
+        <button class="btn" id="useBurner" type="button" hidden>Otomatik cüzdana dön</button>
+      </div>
+      <div id="walletPick" hidden style="flex-basis: 100%; display: grid; gap: 8px">
+        <small class="muted">Bu tarayıcıda cüzdan yok. Sayfayı cüzdan uygulamanın içinde aç:</small>
+        <a class="btn" id="wlMM">MetaMask'ta aç</a><a class="btn" id="wlCB">Coinbase Wallet'ta aç</a><a class="btn" id="wlTW">Trust Wallet'ta aç</a>
+      </div>
+    </div>
     <div class="card" style="margin-top: 8px">
       <small class="muted">Toplam bakiye</small>
       <div class="mono" style="font-size: 34px"><span id="wTotal">…</span> <span class="muted" style="font-size: 18px">MON</span></div>
+      <small class="muted">Kullanılabilir MON (diğer varlıklar aşağıda)</small>
       <div class="bar"><i id="barFree" style="background: var(--green)"></i><i id="barLocked" style="background: var(--gold)"></i></div>
       <div style="display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px">
         <span><span class="pos">■</span> Kullanılabilir <b class="mono" id="wFree">…</b></span>
         <span><span style="color: var(--gold)">■</span> Kasalarda kilitli <b class="mono" id="wLocked">…</b></span>
       </div>
+      <div id="tokenBals" style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px"></div>
       <p style="margin: 12px 0 0; display: flex; gap: 8px; flex-wrap: wrap; align-items: center">
         <span class="badge" id="wKind">Otomatik cüzdan</span>
         <span class="mono" style="word-break: break-all; font-size: 13px" id="wAddr"></span>
@@ -186,8 +207,8 @@
 
     <h2>Kasalarım</h2>
     <div class="grid4">
-      <div class="card metric"><small>Kasada kilitli</small><b id="kLocked">…</b> <span class="muted">MON</span></div>
-      <div class="card metric"><small>Host kazancı</small><b id="kEarn" class="pos">…</b> <span class="muted">MON</span></div>
+      <div class="card metric"><small>Kasada kilitli</small><b id="kLocked" style="font-size: 16px">…</b></div>
+      <div class="card metric"><small>Host kazancı</small><b id="kEarn" class="pos" style="font-size: 16px">…</b></div>
       <div class="card metric"><small>Dayanma oranı</small><b id="kRate">…</b></div>
       <div class="card metric"><small>Kasa</small><b id="kVaults">…</b></div>
     </div>
@@ -203,12 +224,6 @@
 
     <h2>Güvenlik</h2>
     <div class="card" style="display: grid; gap: 8px">
-      <button class="btn" id="connect" type="button">Kendi cüzdanınla bağlan</button>
-      <button class="btn" id="useBurner" type="button" hidden>Otomatik cüzdana dön</button>
-      <div id="walletPick" hidden style="display: grid; gap: 8px">
-        <small class="muted">Bu tarayıcıda cüzdan yok. Sayfayı cüzdan uygulamanın içinde aç:</small>
-        <a class="btn" id="wlMM">MetaMask'ta aç</a><a class="btn" id="wlCB">Coinbase Wallet'ta aç</a><a class="btn" id="wlTW">Trust Wallet'ta aç</a>
-      </div>
       <button class="btn" id="revealKey" type="button">Anahtarı yedekle</button>
       <div id="keyBox" hidden style="display: grid; gap: 8px; border: 1px solid var(--red); border-radius: 10px; padding: 10px">
         <small style="color: var(--red)">Bu anahtarı kimseyle paylaşma. Bu cüzdan sadece testnet içindir.</small>
@@ -234,7 +249,7 @@
     <div class="grid4">
       <div class="card metric"><small>Deneme</small><b id="pAttempts">…</b></div>
       <div class="card metric"><small>Kırılan</small><b id="pCracked" class="pos">…</b></div>
-      <div class="card metric"><small>En iyi ödül</small><b id="pBest">…</b> <span class="muted">MON</span></div>
+      <div class="card metric"><small>En iyi ödül</small><b id="pBest" style="font-size: 16px">…</b></div>
       <div class="card metric"><small>Açtığın kasa</small><b id="pHosted">…</b></div>
     </div>
 
@@ -286,7 +301,7 @@
 </main>
 
 <script type="module">
-import { createPublicClient, createWalletClient, custom, defineChain, formatEther, getAddress, http, isAddress, parseAbi, parseEther } from "https://esm.sh/viem@2.57.5";
+import { createPublicClient, createWalletClient, custom, defineChain, formatEther, formatUnits, getAddress, http, isAddress, parseAbi, parseEther } from "https://esm.sh/viem@2.57.5";
 import { generatePrivateKey, privateKeyToAccount } from "https://esm.sh/viem@2.57.5/accounts";
 
 const $ = (id) => document.getElementById(id);
@@ -296,14 +311,26 @@ const mon = (w, d = 2) => Number(formatEther(BigInt(w))).toFixed(d);
 const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
 const toast = (t) => { $("toast").innerHTML = t; };
 const abi = parseAbi([
-  "function openVault(uint8 tier, uint64 duration, bytes32 promptHash) payable returns (uint256)",
+  "function openVault(address asset, uint8 tier, uint64 duration, bytes32 promptHash) payable returns (uint256)",
   "function settle(uint256 id)",
 ]);
+const erc20 = parseAbi([
+  "function balanceOf(address) view returns (uint256)",
+  "function allowance(address owner, address spender) view returns (uint256)",
+  "function approve(address spender, uint256 amount) returns (bool)",
+]);
 const TIER = { 1: "ORTA", 2: "YÜKSEK" };
+const NATIVE = "0x0000000000000000000000000000000000000000";
 
 let V = await (await fetch("/api/vaults")).json();
 let offset = V.now - Date.now() / 1000;
 const nowS = () => Math.floor(Date.now() / 1000 + offset);
+const assetOf = (addr) => V.assets.find((a) => a.address.toLowerCase() === String(addr ?? "").toLowerCase()) ?? V.assets[0];
+const sym = (addr) => assetOf(addr).symbol;
+const fmt = (raw, asset, d = 2) => Number(formatUnits(BigInt(raw ?? 0), asset.decimals)).toFixed(d);
+const fmtA = (raw, asset) => { const n = Number(formatUnits(BigInt(raw ?? 0), asset.decimals)); if (!n) return "0"; return n >= 1 ? n.toFixed(2) : n >= 0.01 ? n.toFixed(4) : n.toFixed(6); };
+const amounts = (map, d = 2) => Object.entries(map ?? {}).filter(([, v]) => BigInt(v) > 0n)
+  .map(([s, v]) => { const a = V.assets.find((x) => x.symbol === s); return `${fmt(v, a, d)} ${s}`; }).join(" · ") || "0";
 const chain = defineChain({ id: V.chainId, name: "Monad Testnet", nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 }, rpcUrls: { default: { http: [V.rpcUrl] } } });
 const pub = createPublicClient({ chain, transport: http() });
 
@@ -313,7 +340,7 @@ if (!key) { key = generatePrivateKey(); store.set("kasa-burner", key); }
 const burner = privateKeyToAccount(key);
 const burnerWallet = createWalletClient({ chain, account: burner, transport: http() });
 let me = { kind: "burner", address: burner.address, wallet: burnerWallet };
-let bal = 0n, locked = 0n, accData = null, ktab = "active";
+let bal = 0n, locked = {}, bals = {}, accData = null, ktab = "active";
 function setKTab(t) {
   ktab = t === "history" ? "history" : "active";
   for (const b of document.querySelectorAll("[data-ktab]")) b.setAttribute("aria-pressed", String(b.dataset.ktab === ktab));
@@ -342,15 +369,19 @@ async function useInjected(prompt) {
   const address = getAddress(accounts[0]);
   me = { kind: "injected", address, wallet: createWalletClient({ chain, account: address, transport: custom(eth) }) };
   store.set("kasa-mode", "injected");
+  $("walletPick").hidden = true;
+  toast(`Cüzdan bağlandı: <span class="mono">${esc(short(address))}</span>`);
   showWallet();
   return true;
 }
-function useBurner() { me = { kind: "burner", address: burner.address, wallet: burnerWallet }; store.set("kasa-mode", "burner"); showWallet(); }
+function useBurner() { me = { kind: "burner", address: burner.address, wallet: burnerWallet }; store.set("kasa-mode", "burner"); $("walletPick").hidden = true; showWallet(); }
 function showWallet() {
   $("addrChip").textContent = short(me.address);
   $("wAddr").textContent = me.address;
+  $("connAddr").textContent = me.address;
   $("depAddr").textContent = me.address;
   $("wKind").textContent = me.kind === "burner" ? "Otomatik cüzdan" : "Bağlı cüzdan";
+  $("connKind").textContent = me.kind === "burner" ? "Otomatik cüzdan" : "Bağlı cüzdan";
   $("wExplorer").href = V.explorerTx.replace(/tx\/?$/, "address/") + me.address;
   $("connect").hidden = me.kind !== "burner";
   $("useBurner").hidden = me.kind === "burner";
@@ -380,6 +411,7 @@ function go(tab) {
   if (tab === "profile") { renderProfile(); loadLeaderboard(); }
 }
 for (const b of document.querySelectorAll("[data-tab],[data-go]")) b.onclick = () => go(b.dataset.tab || b.dataset.go);
+$("addrChip").onclick = () => go("wallet");
 go(["open", "wallet", "profile"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "explore");
 
 // --- Keşfet ---
@@ -389,14 +421,14 @@ const status = (v) => (v.settled ? (v.byTimeout ? "Dayandı" : "Kırıldı") : l
 const hostName = (v) => (v.live ? "Canlı tur" : short(v.host));
 const ago = (t) => { const s = nowS() - t; return s < 60 ? "az önce" : s < 3600 ? `${Math.floor(s / 60)} dk önce` : s < 86400 ? `${Math.floor(s / 3600)} sa önce` : new Date(t * 1000).toLocaleDateString("tr-TR"); };
 function renderExplore() {
-  $("mTvl").textContent = mon(V.stats.tvl);
+  $("mTvl").textContent = amounts(V.stats.tvl, 2);
   $("mActive").textContent = V.stats.active;
   $("mAtt").textContent = V.stats.attempts24h;
   $("mCracked").textContent = V.stats.cracked24h;
   const active = V.vaults.filter((v) => !v.settled && left(v) > 0);
   const top = [...active].sort((a, b) => Number(BigInt(b.pool) - BigInt(a.pool)))[0];
   $("featured").innerHTML = top
-    ? `<div><div class="muted" style="font-size: 13px">#${top.id} · ${esc(hostName(top))} · <span class="badge ${top.tier === 2 ? "t2" : ""}">${TIER[top.tier]}</span> · ${esc(top.scenario?.name ?? "")}</div><div class="big">${mon(top.pool)} <span class="muted" style="font-size: 16px">MON</span></div><div class="muted mono" style="font-size: 13px">${fmtLeft(left(top))} kaldı · ${top.attempts} deneme</div></div><a class="btn primary" href="/play.html?v=${top.id}">Kasayı görüntüle</a>`
+    ? `<div><div class="muted" style="font-size: 13px">#${top.id} · ${esc(hostName(top))} · <span class="badge ${top.tier === 2 ? "t2" : ""}">${TIER[top.tier]}</span> · ${esc(top.assetSymbol)} · ${esc(top.scenario?.name ?? "")}</div><div class="big">${fmt(top.pool, assetOf(top.asset))} <span class="muted" style="font-size: 16px">${esc(top.assetSymbol)}</span></div><div class="muted mono" style="font-size: 13px">${fmtLeft(left(top))} kaldı · ${top.attempts} deneme</div></div><a class="btn primary" href="/play.html?v=${top.id}">Kasayı görüntüle</a>`
     : `<span class="muted">Aktif kasa yok. İlk kasayı sen aç.</span>`;
   let list = V.vaults.filter((v) => !$("fTier").value || String(v.tier) === $("fTier").value);
   const st = $("fStatus").value;
@@ -404,37 +436,64 @@ function renderExplore() {
   if (st === "ending") list = list.filter((v) => !v.settled && left(v) > 0 && left(v) < 600);
   const so = $("fSort").value;
   list.sort((a, b) => (so === "pool" ? Number(BigInt(b.pool) - BigInt(a.pool)) : so === "time" ? left(a) - left(b) : b.id - a.id));
-  $("vaultRows").innerHTML = list.map((v) => `<tr class="click" data-v="${v.id}"><td>#${v.id} ${esc(hostName(v))} <span class="badge ${v.tier === 2 ? "t2" : ""}">${TIER[v.tier]}</span><br><small class="muted">${esc(v.scenario?.name ?? "")}</small></td><td class="num">${mon(v.settled ? v.prize : v.pool)}</td><td class="num">${mon(v.fee, 3)}</td><td class="num">${v.attempts}</td><td class="num">${v.settled ? "—" : fmtLeft(left(v))}</td><td class="${v.settled && !v.byTimeout ? "neg" : v.settled ? "muted" : "pos"}">${status(v)}</td></tr>`).join("")
-    || `<tr><td colspan="6" class="muted">Bu filtrede kasa yok.</td></tr>`;
+  $("vaultRows").innerHTML = list.map((v) => {
+    const a = assetOf(v.asset);
+    return `<tr class="click" data-v="${v.id}"><td>#${v.id} ${esc(hostName(v))} <span class="badge ${v.tier === 2 ? "t2" : ""}">${TIER[v.tier]}</span> <span class="badge">${esc(v.assetSymbol)}</span><br><small class="muted">${esc(v.scenario?.name ?? "")}</small></td><td class="num">${fmtA(v.settled ? v.prize : v.pool, a)} ${esc(v.assetSymbol)}</td><td class="num">${fmtA(v.fee, a)} ${esc(v.assetSymbol)}</td><td class="num">${v.attempts}</td><td class="num">${v.settled ? "—" : fmtLeft(left(v))}</td><td class="${v.settled && !v.byTimeout ? "neg" : v.settled ? "muted" : "pos"}">${status(v)}</td></tr>`;
+  }).join("") || `<tr><td colspan="6" class="muted">Bu filtrede kasa yok.</td></tr>`;
   for (const tr of document.querySelectorAll("#vaultRows tr.click")) tr.onclick = () => (location.href = `/play.html?v=${tr.dataset.v}`);
-  $("feed").innerHTML = V.events.map((e) => `<div><span class="mono">${e.kind === "cracked" ? short(e.who) : `#${e.vault}`}</span><span>${e.kind === "cracked" ? `#${e.vault} kasasını kırdı` : "kasası dayandı · host"}</span><span class="mono ${e.kind === "cracked" ? "pos" : ""}">+${mon(e.amount)} MON</span><span class="muted">${e.time ? ago(e.time) : ""}</span><a href="${V.explorerTx}${e.tx}" target="_blank" rel="noopener">↗</a></div>`).join("") || `<span class="muted">Henüz olay yok.</span>`;
+  $("feed").innerHTML = V.events.map((e) => `<div><span class="mono">${e.kind === "cracked" ? short(e.who) : `#${e.vault}`}</span><span>${e.kind === "cracked" ? `#${e.vault} kasasını kırdı` : "kasası dayandı · host"}</span><span class="mono ${e.kind === "cracked" ? "pos" : ""}">+${fmt(e.amount, assetOf(e.asset))} ${esc(e.assetSymbol)}</span><span class="muted">${e.time ? ago(e.time) : ""}</span><a href="${V.explorerTx}${e.tx}" target="_blank" rel="noopener">↗</a></div>`).join("") || `<span class="muted">Henüz olay yok.</span>`;
 }
 for (const id of ["fTier", "fStatus", "fSort"]) $(id).onchange = renderExplore;
 
 // --- Kasa aç ---
-$("tierOpts").innerHTML = [1, 2].map((t) => `<label class="opt"><input type="radio" name="tier" value="${t}" ${t === 2 ? "checked" : ""}><span><span class="badge ${t === 2 ? "t2" : ""}">${TIER[t]}</span><div class="mono" style="font-size: 20px; margin-top: 8px">${mon(V.tiers[t].deposit)} MON</div><small class="muted">Deneme ücreti ${mon(V.tiers[t].fee, 3)} MON · ${t === 2 ? "zor, güçlü model" : "daha kolay, deneme çeker"}</small></span></label>`).join("");
+$("asset").innerHTML = V.assets.map((a) => `<option value="${a.address}">${esc(a.symbol)}</option>`).join("");
 $("persona").innerHTML = V.scenarios.map((s) => `<option value="${s.hash}">${esc(s.name)}</option>`).join("");
 const sel = (n) => document.querySelector(`input[name="${n}"]:checked`).value;
-function renderSummary() {
-  const t = Number(sel("tier")), d = Number(sel("dur")), dep = BigInt(V.tiers[t].deposit), fee = BigInt(V.tiers[t].fee);
-  $("sDep").textContent = `${mon(dep)} MON`;
-  $("sFee").textContent = `${mon(fee, 3)} MON`;
-  $("sDur").textContent = { 1800: "30 dk", 7200: "2 saat", 86400: "24 saat" }[d];
-  $("sEst").textContent = `+${mon((fee * 100n * 95n) / 100n)} MON`;
-  $("sRisk").textContent = `Kasa kırılırsa yatırdığın ${mon(dep)} MON ve toplanan ücretler kırana gider.`;
-  $("personaTag").textContent = V.scenarios.find((s) => s.hash === $("persona").value)?.tagline ?? "";
-  const missing = dep + 20_000_000_000_000_000n - bal;
-  $("create").disabled = missing > 0n;
-  $("create").textContent = missing > 0n ? `Yetersiz bakiye · ${mon(missing)} MON eksik` : "Kasa oluştur";
+const currentAsset = () => assetOf($("asset").value);
+function renderTiers() {
+  const a = currentAsset();
+  $("tierOpts").innerHTML = [1, 2].map((t) => {
+    const tier = a.tiers[t];
+    return `<label class="opt"><input type="radio" name="tier" value="${t}" ${t === 2 ? "checked" : ""}><span><span class="badge ${t === 2 ? "t2" : ""}">${TIER[t]}</span><div class="mono" style="font-size: 20px; margin-top: 8px">${fmtA(tier.deposit, a)} ${esc(a.symbol)}</div><small class="muted">Deneme ücreti ${fmtA(tier.fee, a)} ${esc(a.symbol)} · ${t === 2 ? "zor, güçlü model" : "daha kolay, deneme çeker"}</small></span></label>`;
+  }).join("");
+  renderSummary();
 }
+function renderSummary() {
+  const a = currentAsset(), t = Number(sel("tier")), d = Number(sel("dur"));
+  const dep = BigInt(a.tiers[t].deposit), fee = BigInt(a.tiers[t].fee);
+  $("sDep").textContent = `${fmtA(dep, a)} ${a.symbol}`;
+  $("sFee").textContent = `${fmtA(fee, a)} ${a.symbol}`;
+  $("sDur").textContent = { 1800: "30 dk", 7200: "2 saat", 86400: "24 saat" }[d];
+  $("sEst").textContent = `+${fmtA((fee * 100n * 95n) / 100n, a)} ${a.symbol}`;
+  $("sRisk").textContent = `Kasa kırılırsa yatırdığın ${fmtA(dep, a)} ${a.symbol} ve toplanan ücretler kırana gider.`;
+  $("personaTag").textContent = V.scenarios.find((s) => s.hash === $("persona").value)?.tagline ?? "";
+  const have = bals[a.address.toLowerCase()] ?? 0n;
+  const nativeNeed = a.address === NATIVE ? dep + 20_000_000_000_000_000n : 0n;
+  const missing = (nativeNeed > have ? nativeNeed - have : 0n) + (a.address !== NATIVE && dep > have ? dep - have : 0n);
+  $("create").disabled = missing > 0n;
+  $("create").textContent = missing > 0n ? `Yetersiz bakiye · ${fmtA(missing, a)} ${a.symbol} eksik` : "Kasa oluştur";
+}
+$("asset").onchange = renderTiers;
 $("open").onchange = renderSummary;
 $("create").onclick = async () => {
-  const t = Number(sel("tier")), d = BigInt(sel("dur"));
-  if (!$("setSkipConfirm").checked && !confirm(`${mon(V.tiers[t].deposit)} MON yatırıp kasa açacaksın. Onaylıyor musun?`)) return;
+  const a = currentAsset(), t = Number(sel("tier")), d = BigInt(sel("dur")), dep = BigInt(a.tiers[t].deposit);
+  if (!$("setSkipConfirm").checked && !confirm(`${fmt(dep, a, 6)} ${a.symbol} yatırıp kasa açacaksın. Onaylıyor musun?`)) return;
   $("create").disabled = true;
   try {
+    if (a.address !== NATIVE) {
+      const allowance = await pub.readContract({ address: a.address, abi: erc20, functionName: "allowance", args: [me.address, V.contract] });
+      if (allowance < dep) {
+        $("createMsg").textContent = me.kind === "burner" ? "Token onayı gönderiliyor…" : "Cüzdanında token onayı ver…";
+        const ah = await me.wallet.writeContract({ address: a.address, abi: erc20, functionName: "approve", args: [V.contract, dep] });
+        await pub.waitForTransactionReceipt({ hash: ah });
+      }
+    }
     $("createMsg").textContent = me.kind === "burner" ? "İşlem gönderiliyor…" : "Cüzdanında onayla…";
-    const hash = await me.wallet.writeContract({ address: V.contract, abi, functionName: "openVault", args: [t, d, $("persona").value], value: BigInt(V.tiers[t].deposit) });
+    const hash = await me.wallet.writeContract({
+      address: V.contract, abi, functionName: "openVault",
+      args: [a.address, t, d, $("persona").value],
+      value: a.address === NATIVE ? dep : 0n,
+    });
     $("createMsg").innerHTML = `İşlem bekleniyor… <a href="${V.explorerTx}${hash}" target="_blank" rel="noopener">tx ↗</a>`;
     await pub.waitForTransactionReceipt({ hash });
     $("createMsg").innerHTML = `Kasan aktif. <a href="${V.explorerTx}${hash}" target="_blank" rel="noopener">tx ↗</a> · Birkaç saniye içinde Keşfet'te görünür.`;
@@ -449,21 +508,29 @@ const KIND = { attempt: "Deneme ücreti", deposit: "Kasa yatırımı", prize: "�
 const STATUS = { locked: "Kilitli", done: "Onaylandı", pending: "Bekliyor", rejected: "Onaylandı", approved: "Onaylandı", skipped: "Onaylandı" };
 async function refreshAccount() {
   try {
-    const [b, acc] = await Promise.all([pub.getBalance({ address: me.address }), fetch(`/api/account?a=${me.address}`).then((r) => r.json())]);
-    bal = b; locked = BigInt(acc.locked);
-    const total = bal + locked;
+    const [balanceList, acc] = await Promise.all([
+      Promise.all(V.assets.map((a) => a.address === NATIVE
+        ? pub.getBalance({ address: me.address })
+        : pub.readContract({ address: a.address, abi: erc20, functionName: "balanceOf", args: [me.address] }))),
+      fetch(`/api/account?a=${me.address}`).then((r) => r.json()),
+    ]);
+    bals = Object.fromEntries(V.assets.map((a, i) => [a.address.toLowerCase(), BigInt(balanceList[i])]));
+    bal = bals[NATIVE] ?? 0n;
+    locked = acc.locked ?? {};
+    const nativeTotal = bal + BigInt(locked.MON ?? 0);
     $("balChip").textContent = `${mon(bal)} MON`;
-    $("wTotal").textContent = mon(total);
+    $("wTotal").textContent = mon(bal);
     $("wFree").textContent = mon(bal);
-    $("wLocked").textContent = mon(locked);
-    $("barFree").style.width = total ? `${Number((bal * 1000n) / total) / 10}%` : "0";
-    $("barLocked").style.width = total ? `${Number((locked * 1000n) / total) / 10}%` : "0";
+    $("wLocked").textContent = amounts(locked, 4);
+    $("barFree").style.width = nativeTotal ? `${Number((bal * 1000n) / nativeTotal) / 10}%` : "0";
+    $("barLocked").style.width = nativeTotal ? `${Number((BigInt(locked.MON ?? 0) * 1000n) / nativeTotal) / 10}%` : "0";
+    $("tokenBals").innerHTML = V.assets.map((a) => `<span class="chip mono" style="font-size: 12px">${fmt(bals[a.address.toLowerCase()] ?? 0n, a, 4)} ${esc(a.symbol)}</span>`).join("");
     const f = $("hFilter").value;
     const rows = acc.history.filter((h) => !f || (f === "vault" ? ["deposit", "hostReturn"].includes(h.kind) : f === "prize" ? ["prize", "hostReturn"].includes(h.kind) : h.kind === f));
-    $("histRows").innerHTML = rows.map((h) => `<tr><td class="mono">${h.time ? new Date(h.time * 1000).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : ""}</td><td>${KIND[h.kind]}</td><td><a href="/play.html?v=${h.vault}">#${h.vault}</a></td><td class="num ${h.amount.startsWith("+") ? "pos" : "neg"}">${h.amount.startsWith("+") ? "+" : "−"}${Number(h.amount.slice(1)).toFixed(4)}</td><td>${STATUS[h.status]}</td><td><a href="${V.explorerTx}${h.tx}" target="_blank" rel="noopener">↗</a></td></tr>`).join("") || `<tr><td colspan="6" class="muted">Henüz işlem yok.</td></tr>`;
+    $("histRows").innerHTML = rows.map((h) => `<tr><td class="mono">${h.time ? new Date(h.time * 1000).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : ""}</td><td>${KIND[h.kind]}</td><td><a href="/play.html?v=${h.vault}">#${h.vault}</a></td><td class="num ${h.amount.startsWith("+") ? "pos" : "neg"}">${h.amount.startsWith("+") ? "+" : "−"}${h.amount.slice(1)} ${esc(h.assetSymbol ?? "")}</td><td>${STATUS[h.status]}</td><td><a href="${V.explorerTx}${h.tx}" target="_blank" rel="noopener">↗</a></td></tr>`).join("") || `<tr><td colspan="6" class="muted">Henüz işlem yok.</td></tr>`;
     accData = acc;
-    $("kLocked").textContent = mon(acc.locked);
-    $("kEarn").textContent = mon(acc.hostEarnings ?? 0);
+    $("kLocked").textContent = amounts(locked, 4);
+    $("kEarn").textContent = amounts(acc.hostEarnings, 4);
     $("kRate").textContent = acc.hostedSettled ? `%${Math.round((acc.hostedHeld / acc.hostedSettled) * 100)}` : "—";
     $("kVaults").textContent = acc.hosted.length;
     renderHosted();
@@ -476,12 +543,13 @@ function renderHosted() {
   if (!accData) return;
   const rows = accData.hosted.filter((v) => (ktab === "history" ? v.settled : !v.settled));
   $("hostRows").innerHTML = rows.map((v) => {
+    const a = assetOf(v.asset);
     const canSettle = !v.settled && nowS() >= v.endsAt + 60;
     const stateText = v.settled ? (v.byTimeout ? "Dayandı" : `Kırıldı · ${short(v.winner)}`) : `${fmtLeft(left(v))} kaldı`;
     const action = canSettle
       ? `<button class="btn" type="button" data-settle="${v.id}" style="min-height: 32px; padding: 0 10px">Sonuçlandır</button>`
       : v.settled ? `<a href="/play.html?v=${v.id}">Gör</a>` : `<span class="muted">—</span>`;
-    return `<tr class="click" data-v="${v.id}"><td>#${v.id} <small class="muted">${esc(v.scenario?.name ?? "")}</small></td><td><span class="badge ${v.tier === 2 ? "t2" : ""}">${TIER[v.tier]}</span></td><td class="num ${v.settled ? (v.byTimeout ? "pos" : "neg") : ""}">${v.settled ? (v.byTimeout ? `+${mon(v.prize)}` : `−${mon(v.deposit)}`) : mon(v.pool)}</td><td class="num">${v.attempts}</td><td>${stateText}</td><td>${action}</td></tr>`;
+    return `<tr class="click" data-v="${v.id}"><td>#${v.id} <small class="muted">${esc(v.scenario?.name ?? "")}</small></td><td><span class="badge ${v.tier === 2 ? "t2" : ""}">${TIER[v.tier]}</span> <span class="badge">${esc(v.assetSymbol)}</span></td><td class="num ${v.settled ? (v.byTimeout ? "pos" : "neg") : ""}">${v.settled ? (v.byTimeout ? `+${fmtA(v.prize, a)}` : `−${fmtA(v.deposit, a)}`) : fmtA(v.pool, a)} ${esc(v.assetSymbol)}</td><td class="num">${v.attempts}</td><td>${stateText}</td><td>${action}</td></tr>`;
   }).join("") || `<tr><td colspan="6" class="muted">${ktab === "history" ? "Henüz sonuçlanan kasan yok." : "Aktif kasan yok."}</td></tr>`;
   for (const tr of document.querySelectorAll("#hostRows tr.click")) tr.onclick = (e) => {
     if (e.target.closest("[data-settle]")) return;
@@ -554,11 +622,15 @@ function renderProfile() {
   if (!accData) return;
   const mine = accData.myAttempts ?? [];
   const crackedList = mine.filter((a) => a.status === "approved");
-  const best = crackedList.reduce((m, a) => (BigInt(a.vaultPrize ?? 0) > m ? BigInt(a.vaultPrize ?? 0) : m), 0n);
+  const bestBy = {};
+  for (const a of crackedList) {
+    const s = a.assetSymbol ?? "MON", v = BigInt(a.vaultPrize ?? 0);
+    if (!bestBy[s] || v > BigInt(bestBy[s])) bestBy[s] = v.toString();
+  }
   const hosted = accData.hosted ?? [];
   $("pAttempts").textContent = mine.length;
   $("pCracked").textContent = crackedList.length;
-  $("pBest").textContent = mon(best);
+  $("pBest").textContent = amounts(bestBy, 4);
   $("pHosted").textContent = hosted.length;
   const defs = [
     { ico: "👣", name: "İlk Temas", on: mine.length >= 1 },
@@ -570,8 +642,8 @@ function renderProfile() {
     { ico: "🎯", name: "Keskin Nişancı", on: crackedList.length >= 1 && mine.length <= 3 },
   ];
   $("pBadges").innerHTML = defs.map((b) => `<div class="badgeCard ${b.on ? "on" : ""}"><span class="ico">${b.ico}</span>${esc(b.name)}</div>`).join("");
-  const bestList = [...crackedList].sort((a, b) => Number(BigInt(b.vaultPrize ?? 0) - BigInt(a.vaultPrize ?? 0)) || (b.time ?? 0) - (a.time ?? 0)).slice(0, 5);
-  $("pBestList").innerHTML = bestList.map((a) => `<div class="attItem"><div><a href="/play.html?v=${a.vault}">#${a.vault}</a> · <span class="pos">+${mon(a.vaultPrize ?? 0)} MON havuz</span></div><div>${esc(a.message)}</div>${a.reply ? `<div class="reply">“${esc(a.reply)}”</div>` : ""}</div>`).join("") || `<p class="muted">Henüz onaylanan bir denemen yok. Pratik modda ısın, sonra Zor modda dene.</p>`;
+  const bestList = [...crackedList].sort((a, b) => (b.time ?? 0) - (a.time ?? 0)).slice(0, 5);
+  $("pBestList").innerHTML = bestList.map((a) => `<div class="attItem"><div><a href="/play.html?v=${a.vault}">#${a.vault}</a> · <span class="pos">+${fmt(a.vaultPrize ?? 0, assetOf(a.asset), 4)} ${esc(a.assetSymbol ?? "MON")} havuz</span></div><div>${esc(a.message)}</div>${a.reply ? `<div class="reply">“${esc(a.reply)}”</div>` : ""}</div>`).join("") || `<p class="muted">Henüz onaylanan bir denemen yok. Pratik modda ısın, sonra Zor modda dene.</p>`;
   const unlocked = crackedList.length > 0;
   $("pNftName").textContent = unlocked ? `Coaxer Rozeti #${crackedList.length}` : "Kilitli rozet";
   $("pNftDesc").textContent = unlocked ? `${crackedList.length} kasa kırdın. Bu hatıra rozeti adresine özeldir.` : "İlk kasayı kırınca hatıra rozetin açılır.";
@@ -587,7 +659,8 @@ async function loadLeaderboard() {
     const L = await (await fetch("/api/leaderboard")).json();
     $("lRows").innerHTML = L.top.map((r, i) => {
       const isMe = r.address.toLowerCase() === me.address.toLowerCase();
-      return `<tr${isMe ? ' style="background:#1D2438"' : ""}><td class="mono">${i + 1}</td><td class="mono">${isMe ? "sen" : short(r.address)}</td><td class="num pos">${mon(r.prize)}</td><td class="num">${r.cracked}</td><td class="num">${r.attempts}</td></tr>`;
+      const won = amounts(r.prizes, 2);
+      return `<tr${isMe ? ' style="background:#1D2438"' : ""}><td class="mono">${i + 1}</td><td class="mono">${isMe ? "sen" : short(r.address)}</td><td class="num pos">${won === "0" ? "—" : won}</td><td class="num">${r.cracked}</td><td class="num">${r.attempts}</td></tr>`;
     }).join("") || `<tr><td colspan="5" class="muted">Henüz oyuncu yok.</td></tr>`;
   } catch {
     $("lRows").innerHTML = `<tr><td colspan="5" class="muted">Liderlik tablosu yüklenemedi.</td></tr>`;
@@ -628,7 +701,7 @@ showWallet();
 if (new URLSearchParams(location.search).has("wallet") && window.ethereum) { if (!(await useInjected(true).catch(() => false))) useBurner(); }
 else if (store.get("kasa-mode") === "injected" && !(await useInjected(false).catch(() => false))) useBurner();
 renderExplore();
-renderSummary();
+renderTiers();
 async function refreshVaults() {
   V = await (await fetch("/api/vaults")).json();
   offset = V.now - Date.now() / 1000;

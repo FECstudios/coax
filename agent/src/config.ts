@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { createPublicClient, createWalletClient, defineChain, encodeDeployData, http, keccak256, parseEther, type Hex } from "viem";
+import { createPublicClient, createWalletClient, defineChain, encodeDeployData, http, keccak256, parseEther, parseUnits, zeroAddress, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -107,12 +107,54 @@ export type Deployment = { address: Hex; deployBlock: string; chainId: number; p
 export const COAX_PATH = process.env.COAX_FILE || join(ROOT, "coax.json");
 const coaxArtifact = JSON.parse(readFileSync(join(ROOT, "..", "contracts", "out", "CoaxVaults.sol", "CoaxVaults.json"), "utf8")) as { abi: any[]; bytecode: { object: Hex } };
 export const coaxAbi = coaxArtifact.abi;
+
+/// Kasa varlıkları: MON (native) + testnette resmi olarak bulunan ERC-20'ler.
+/// Adresler .env ile override edilebilir; ana chain'e geçerken mutlaka değiştir.
+export type TokenCfg = {
+  symbol: string;
+  address: Hex;
+  decimals: number;
+  deposits: [bigint, bigint];
+  fees: [bigint, bigint];
+};
+
+const tokenCfg = (symbol: string, address: Hex, decimals: number, depositKey: string, feeKey: string, defaults: [string, string, string, string]): TokenCfg => ({
+  symbol,
+  address,
+  decimals,
+  deposits: [parseUnits(env(`TIER1_DEPOSIT_${depositKey}`, defaults[0]), decimals), parseUnits(env(`TIER2_DEPOSIT_${depositKey}`, defaults[1]), decimals)],
+  fees: [parseUnits(env(`TIER1_FEE_${feeKey}`, defaults[2]), decimals), parseUnits(env(`TIER2_FEE_${feeKey}`, defaults[3]), decimals)],
+});
+
+export const tokens: TokenCfg[] = [
+  tokenCfg("MON", zeroAddress, 18, "MON", "MON", [
+    env("TIER1_DEPOSIT_MON", "0.5"), env("TIER2_DEPOSIT_MON", "1"),
+    env("TIER1_FEE_MON", "0.01"), env("TIER2_FEE_MON", "0.02"),
+  ]),
+  tokenCfg("USDC", env("USDC_ADDRESS", "0x534b2f3A21130d7a60830c2Df862319e593943A3") as Hex, 6, "USDC", "USDC", ["1", "2", "0.02", "0.04"]),
+  tokenCfg("WETH", env("WETH_ADDRESS", "0x45477f4709771331db81944A5E20eF95Bc7BA2D7") as Hex, 18, "WETH", "WETH", ["0.0005", "0.001", "0.00001", "0.00002"]),
+  tokenCfg("WMON", env("WMON_ADDRESS", "0xFb8bf4c1CC7a94c73D209a149eA2AbEa852BC541") as Hex, 18, "WMON", "WMON", ["0.5", "1", "0.01", "0.02"]),
+];
+export const tokenByAddress = (a: string) => tokens.find((t) => t.address.toLowerCase() === a.toLowerCase());
+
 export const coaxCfg = {
-  deposits: [parseEther(env("TIER1_DEPOSIT_MON", "0.5")), parseEther(env("TIER2_DEPOSIT_MON", "1"))] as [bigint, bigint],
-  fees: [parseEther(env("TIER1_FEE_MON", "0.01")), parseEther(env("TIER2_FEE_MON", "0.02"))] as [bigint, bigint],
+  // MON için eski env isimleri korunuyor; tüm varlıklar `tokens` içinde.
+  deposits: tokens[0].deposits,
+  fees: tokens[0].fees,
+  tokens,
   liveTier: Number(env("LIVE_TIER", "1")),
   tier2Model: env("TIER2_MODEL", "google/gemma-3-12b-it"),
 };
 export const coaxDeployData = () =>
-  encodeDeployData({ abi: coaxAbi, bytecode: coaxArtifact.bytecode.object, args: [account.address, coaxCfg.deposits, coaxCfg.fees, scenarios.map((s) => s.hash)] });
+  encodeDeployData({
+    abi: coaxAbi,
+    bytecode: coaxArtifact.bytecode.object,
+    args: [
+      account.address,
+      tokens.map((t) => t.address),
+      tokens.flatMap((t) => t.deposits),
+      tokens.flatMap((t) => t.fees),
+      scenarios.map((s) => s.hash),
+    ],
+  });
 export type CoaxDeployment = { address: Hex; deployBlock: string; chainId: number; deployedAt: string };
