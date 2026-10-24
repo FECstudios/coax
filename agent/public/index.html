@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kasa Kırıcı</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 520px; margin: 0 auto; padding: 16px; background: #111; color: #eee; }
+  .big { font-size: 2.2em; font-weight: bold; }
+  textarea { width: 100%; box-sizing: border-box; height: 110px; font-size: 1em; }
+  button { width: 100%; padding: 14px; font-size: 1.2em; margin-top: 8px; }
+  button.small { padding: 8px; font-size: .95em; }
+  input { width: 100%; box-sizing: border-box; padding: 8px; font-size: .95em; margin-top: 6px; }
+  .warn { color: #fb3; font-size: .9em; }
+  .row { display: flex; justify-content: space-between; gap: 8px; }
+  .box { border: 1px solid #333; padding: 10px; margin-top: 12px; }
+  .att { border-top: 1px solid #333; padding: 8px 0; font-size: .95em; }
+  .approved { color: #4f4; } .rejected { color: #f66; } .pending, .skipped { color: #aaa; }
+  a { color: #8af; } small { color: #999; word-break: break-all; }
+</style>
+</head>
+<body>
+<h1>🔐 Kasa Kırıcı</h1>
+<div class="row">
+  <div><div>Havuz</div><div class="big" id="pool">…</div></div>
+  <div><div>Kalan</div><div class="big" id="timer">…</div></div>
+</div>
+<p>Deneme ücreti: <b id="fee">…</b> MON</p>
+<div id="over"></div>
+<textarea id="msg" maxlength="500" placeholder="Bekçiyi ikna et..."></textarea>
+<div class="row"><span class="warn">Mesajlar zincirde herkese açık. Kişisel bilgi yazmayın.</span><span id="count">0/500</span></div>
+<button id="send">Saldır</button>
+<p id="status"></p>
+
+<div class="box">
+  <small>Oynayan cüzdan (<b id="kind">otomatik</b>): <span id="addr"></span> · bakiye <span id="bal">…</span> MON</small>
+  <button id="connect" class="small">🦊 Kendi cüzdanımla oyna</button>
+  <button id="useBurner" class="small" style="display:none">Otomatik cüzdana dön</button>
+</div>
+
+<div class="box" id="wdbox">
+  <small>Otomatik cüzdan bu tarayıcıda saklanıyor; tarayıcı verisini silersen kaybolur. İçindeki MON'u kendi cüzdanına al:</small>
+  <small>Otomatik cüzdan bakiyesi: <span id="bbal">…</span> MON</small>
+  <input id="to" placeholder="Gönderilecek adres (0x...)">
+  <button id="wd" class="small">Hepsini gönder</button>
+</div>
+
+<h3>Denemelerim</h3>
+<div id="mine"></div>
+
+<script type="module">
+import { createPublicClient, createWalletClient, custom, defineChain, formatEther, getAddress, http, isAddress, parseAbi } from "https://esm.sh/viem@2.57.5";
+import { generatePrivateKey, privateKeyToAccount } from "https://esm.sh/viem@2.57.5/accounts";
+
+const $ = (id) => document.getElementById(id);
+const abi = parseAbi(["function attempt(string message) payable returns (uint256)", "function fee() view returns (uint256)"]);
+const enc = new TextEncoder();
+const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
+
+let S = await (await fetch("/api/state")).json();
+let offset = S.now - Date.now() / 1000; // zincir saati - cihaz saati
+const chain = defineChain({ id: S.chainId, name: "Monad Testnet", nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 }, rpcUrls: { default: { http: [S.rpcUrl] } } });
+const pub = createPublicClient({ chain, transport: http() });
+const mine = new Map(); // tx hash -> mesaj (event gelene kadar)
+
+// Otomatik (burner) cüzdan: her zaman var; kendi cüzdanını bağlayan da buradaki MON'u çekebilir.
+let key = store.get("kasa-burner");
+if (!key) { key = generatePrivateKey(); store.set("kasa-burner", key); }
+const burner = privateKeyToAccount(key);
+const burnerWallet = createWalletClient({ chain, account: burner, transport: http() });
+
+// Oynayan cüzdan: burner ya da tarayıcı cüzdanı (MetaMask vb.)
+let me = { kind: "burner", address: burner.address, wallet: burnerWallet };
+
+function showWallet() {
+  $("kind").textContent = me.kind === "burner" ? "otomatik" : "kendi cüzdanın";
+  $("addr").textContent = me.address;
+  $("connect").style.display = me.kind === "burner" ? "" : "none";
+  $("useBurner").style.display = me.kind === "burner" ? "none" : "";
+  if (me.kind === "injected" && !$("to").value) $("to").value = me.address;
+}
+
+async function useInjected(prompt) {
+  const eth = window.ethereum;
+  if (!eth) {
+    $("status").textContent = "Bu tarayıcıda cüzdan yok. Telefonda MetaMask (ya da başka bir cüzdan) uygulamasını aç, içindeki tarayıcıdan bu adrese gir.";
+    return false;
+  }
+  const accounts = await eth.request({ method: prompt ? "eth_requestAccounts" : "eth_accounts" });
+  if (!accounts.length) return false;
+  const chainHex = "0x" + S.chainId.toString(16);
+  try {
+    await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: chainHex }] });
+  } catch (e) {
+    if (e.code !== 4902 && e?.data?.originalError?.code !== 4902) throw e;
+    await eth.request({
+      method: "wallet_addEthereumChain",
+      params: [{ chainId: chainHex, chainName: "Monad Testnet", nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 }, rpcUrls: [S.rpcUrl], blockExplorerUrls: [S.explorerTx.replace(/tx\/?$/, "")] }],
+    });
+  }
+  const address = getAddress(accounts[0]);
+  me = { kind: "injected", address, wallet: createWalletClient({ chain, account: address, transport: custom(eth) }) };
+  store.set("kasa-mode", "injected");
+  showWallet();
+  await ensureFunds();
+  return true;
+}
+
+function useBurner() {
+  me = { kind: "burner", address: burner.address, wallet: burnerWallet };
+  store.set("kasa-mode", "burner");
+  showWallet();
+  ensureFunds();
+}
+
+$("connect").onclick = () => useInjected(true).catch((e) => ($("status").textContent = `Cüzdan: ${e.shortMessage || e.message}`));
+$("useBurner").onclick = useBurner;
+window.ethereum?.on?.("accountsChanged", () => me.kind === "injected" && useInjected(false).then((ok) => ok || useBurner()));
+
+async function refreshBalance() {
+  const [bal, bbal] = await Promise.all([pub.getBalance({ address: me.address }), pub.getBalance({ address: burner.address })]);
+  $("bal").textContent = Number(formatEther(bal)).toFixed(3);
+  $("bbal").textContent = Number(formatEther(bbal)).toFixed(3);
+  return bal;
+}
+async function ensureFunds() {
+  const bal = await refreshBalance();
+  if (bal >= BigInt(S.fee) * 3n) return;
+  $("status").textContent = "Musluktan MON isteniyor...";
+  const r = await (await fetch("/api/drip", { method: "POST", body: JSON.stringify({ address: me.address }) })).json();
+  $("status").textContent = r.ok ? "MON geldi, saldırabilirsin." : `Musluk: ${r.reason}`;
+  setTimeout(refreshBalance, 1500);
+}
+
+showWallet();
+if (store.get("kasa-mode") === "injected" && !(await useInjected(false).catch(() => false))) useBurner();
+else await ensureFunds();
+
+$("msg").oninput = () => { $("count").textContent = `${enc.encode($("msg").value).length}/500`; };
+
+$("send").onclick = async () => {
+  const message = $("msg").value.trim();
+  const len = enc.encode(message).length;
+  if (!len || len > 500) return ($("status").textContent = "Mesaj 1-500 byte olmalı (Türkçe harf 2 byte).");
+  $("send").disabled = true;
+  try {
+    for (let i = 0; i < 2; i++) {
+      // Aynı anda gelen denemeler ücreti artırır: 3x gönder (~22 eşzamanlı deneme), kontrat fazlasını iade eder.
+      const [fee, bal] = await Promise.all([pub.readContract({ address: S.contract, abi, functionName: "fee" }), pub.getBalance({ address: me.address })]);
+      const reserve = 50_000_000_000_000_000n; // gas için 0.05 MON
+      let value = fee * 3n;
+      if (value > bal - reserve) value = bal - reserve;
+      if (value < fee) { $("status").textContent = "Bakiye yetersiz."; break; }
+      try {
+        $("status").textContent = me.kind === "burner" ? `Gönderiliyor (ücret ${Number(formatEther(fee)).toFixed(4)} MON)...` : "Cüzdanında onayla (fazlası iade edilir)...";
+        const hash = await me.wallet.writeContract({ address: S.contract, abi, functionName: "attempt", args: [message], value });
+        mine.set(hash.toLowerCase(), message);
+        $("msg").value = ""; $("count").textContent = "0/500";
+        $("status").innerHTML = `Gönderildi, bekçi düşünüyor... <a target="_blank" href="${S.explorerTx}${hash}">tx</a>`;
+        break;
+      } catch (e) {
+        const m = e.shortMessage || e.message;
+        if (/ucret yetersiz/.test(e.message) && i === 0) continue;
+        $("status").textContent = `Hata: ${m}`;
+        break;
+      }
+    }
+  } finally {
+    $("send").disabled = S.cracked;
+    refreshBalance();
+  }
+};
+
+$("wd").onclick = async () => {
+  const to = $("to").value.trim();
+  if (!isAddress(to)) return ($("status").textContent = "Geçerli bir adres yaz (0x...).");
+  if (getAddress(to) === burner.address) return ($("status").textContent = "Bu zaten otomatik cüzdanın adresi.");
+  $("wd").disabled = true;
+  try {
+    const [bal, fees, gas] = await Promise.all([
+      pub.getBalance({ address: burner.address }),
+      pub.estimateFeesPerGas(),
+      pub.estimateGas({ account: burner, to, value: 1n }),
+    ]);
+    // Monad gas limiti üzerinden keser: en kötü ihtimal gas * maxFeePerGas, kalanın hepsi gider.
+    const value = bal - gas * fees.maxFeePerGas;
+    if (value <= 0n) return ($("status").textContent = "Gönderilecek MON yok.");
+    if (!confirm(`${Number(formatEther(value)).toFixed(4)} MON → ${to}\nGönderilsin mi?`)) return;
+    const hash = await burnerWallet.sendTransaction({ to, value, gas, maxFeePerGas: fees.maxFeePerGas, maxPriorityFeePerGas: fees.maxPriorityFeePerGas });
+    $("status").innerHTML = `Gönderildi. <a target="_blank" href="${S.explorerTx}${hash}">tx</a>`;
+    setTimeout(refreshBalance, 1500);
+  } catch (e) {
+    $("status").textContent = `Hata: ${e.shortMessage || e.message}`;
+  } finally {
+    $("wd").disabled = false;
+  }
+};
+
+const LABEL = { pending: "bekliyor…", rejected: "reddedildi", approved: "KIRDI 🎉", skipped: "geç kaldı" };
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+function render() {
+  $("pool").textContent = Number(formatEther(BigInt(S.pool))).toFixed(2);
+  $("fee").textContent = Number(formatEther(BigInt(S.fee))).toFixed(4);
+  const left = Math.max(0, S.endTime - Math.floor(Date.now() / 1000 + offset));
+  $("timer").textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
+  if (S.cracked) {
+    const iWon = S.winner?.toLowerCase() === me.address.toLowerCase();
+    $("over").innerHTML = S.byTimeout
+      ? `<h2>Süre doldu</h2><p>Kimse kıramadı, havuz kasada kaldı. Yeni turu bekle.</p><p>Bekçi modeli: ${esc(S.model)}</p>`
+      : `<h2>KASA KIRILDI</h2><p>Kazanan ${esc(S.winner)} · ${Number(formatEther(BigInt(S.prize))).toFixed(2)} MON${iWon ? " — SENSİN!" : ""}</p><p>Bekçi modeli: ${esc(S.model)}</p>`;
+    $("send").disabled = true;
+  } else if ($("over").innerHTML) {
+    $("over").innerHTML = ""; // yeni tur başladı
+    $("send").disabled = false;
+  }
+  const addrs = new Set([me.address.toLowerCase(), burner.address.toLowerCase()]);
+  const list = S.attempts.filter((a) => addrs.has(a.player.toLowerCase()));
+  for (const a of list) mine.delete(a.tx.toLowerCase());
+  $("mine").innerHTML =
+    [...mine.values()].map((m) => `<div class="att pending">${esc(m)}<br>zincire yazılıyor…</div>`).join("") +
+    list.map((a) => `<div class="att"><div>${esc(a.message)}</div><div class="${a.status}">${LABEL[a.status]}${a.reply ? ": " + esc(a.reply) : ""}</div><a target="_blank" href="${S.explorerTx}${a.tx}">tx</a></div>`).join("");
+}
+render();
+setInterval(async () => {
+  try {
+    const prev = S.contract;
+    S = await (await fetch("/api/state")).json();
+    offset = S.now - Date.now() / 1000;
+    if (S.contract !== prev) { mine.clear(); ensureFunds(); }
+    render();
+  } catch {}
+}, 1000);
+</script>
+</body>
+</html>

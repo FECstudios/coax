@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kasa Kırıcı — Ekran</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 24px; background: #000; color: #eee; }
+  .top { display: flex; gap: 40px; align-items: center; }
+  .top img { width: 260px; height: 260px; background: #fff; }
+  .stat div:first-child { color: #999; font-size: 1.4em; }
+  .stat div:last-child { font-size: 4.5em; font-weight: bold; }
+  #feed { margin-top: 24px; font-size: 1.5em; }
+  .att { border-top: 1px solid #333; padding: 10px 0; }
+  .who { color: #8af; } .approved { color: #4f4; } .rejected { color: #f66; } .pending, .skipped { color: #888; }
+  #overlay { display: none; position: fixed; inset: 0; background: #000e; text-align: center; padding-top: 12vh; font-size: 2em; }
+  #overlay h1 { font-size: 3.5em; color: #4f4; margin: 0; }
+</style>
+</head>
+<body>
+<div class="top">
+  <img src="/qr.svg" alt="QR">
+  <div class="stat"><div>Havuz (MON)</div><div id="pool">…</div></div>
+  <div class="stat"><div>Kalan</div><div id="timer">…</div></div>
+  <div class="stat"><div>Deneme</div><div id="total">…</div></div>
+  <div class="stat"><div>Ücret</div><div id="fee" style="font-size:.6em">…</div></div>
+</div>
+<div id="feed"></div>
+<div id="overlay"></div>
+
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const mon = (wei, d = 2) => (Number(BigInt(wei) / 10n ** 12n) / 1e6).toFixed(d);
+const short = (a) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const LABEL = { pending: "🤔 düşünüyor…", rejected: "❌", approved: "🔓 AÇILDI", skipped: "⏱ geç kaldı" };
+
+let offset = 0;
+async function tick() {
+  let S;
+  try { S = await (await fetch("/api/state")).json(); } catch { return; }
+  offset = S.now - Date.now() / 1000; // zincir saati - cihaz saati
+  $("pool").textContent = mon(S.pool);
+  $("fee").textContent = mon(S.fee, 4);
+  $("total").textContent = S.total;
+  const left = Math.max(0, S.endTime - Math.floor(Date.now() / 1000 + offset));
+  $("timer").textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
+  $("feed").innerHTML = S.attempts.slice(0, 12).map((a) =>
+    `<div class="att"><span class="who">${short(a.player)}</span> ${esc(a.message)}<br><span class="${a.status}">${LABEL[a.status]} ${esc(a.reply)}</span></div>`).join("");
+  if (!S.cracked) { $("overlay").style.display = "none"; return; }
+  const w = S.attempts.find((a) => a.id === S.winningId);
+  $("overlay").style.display = "block";
+  const body = S.byTimeout
+    ? `<h1 style="color:#fb3">SÜRE DOLDU</h1><p>Kimse kıramadı. ${mon(S.prize)} MON kasada kaldı 🏦</p>`
+    : `<h1>KASA KIRILDI</h1><p>Kazanan: ${esc(S.winner)}</p><p>${mon(S.prize)} MON</p>${w ? `<p>“${esc(w.message)}”</p>` : ""}`;
+  const key = `${S.contract}|${S.restarting}`;
+  if ($("overlay").dataset.key === key) return;
+  $("overlay").dataset.key = key;
+  $("overlay").innerHTML = `${body}<p style="color:#999">Bekçi: ${esc(S.model)}</p>
+    <button id="restart" style="font-size:1em;padding:16px 40px" ${S.restarting ? "disabled" : ""}>${S.restarting ? "Yeni tur başlatılıyor…" : "🔄 Yeni tur"}</button>
+    <p id="rmsg" style="color:#f66"></p>`;
+  $("restart").onclick = async () => {
+    $("restart").disabled = true;
+    $("restart").textContent = "Yeni tur başlatılıyor…";
+    const r = await (await fetch("/api/restart", { method: "POST" })).json();
+    if (!r.ok) $("rmsg").textContent = r.reason;
+    tick();
+  };
+}
+tick();
+setInterval(tick, 1000);
+</script>
+</body>
+</html>

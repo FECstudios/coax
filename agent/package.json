@@ -1,0 +1,19 @@
+{
+  "name": "kasa-kirici-agent",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.ts",
+    "deploy": "cd ../contracts && PATH=\"$PATH:$HOME/.foundry/bin\" forge build && cd ../agent && node src/deploy.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "qrcode": "1.5.4",
+    "viem": "2.57.5"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "@types/qrcode": "1.5.6",
+    "typescript": "5.9.3"
+  }
+}

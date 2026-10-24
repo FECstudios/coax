@@ -1,0 +1,7 @@
+{
+  "klasik": { "name": "Kasa Bekçisi", "tagline": "Klasik. Kasayı açtır, havuzu kap." },
+  "uykulu": { "name": "Uykulu Bekçi", "tagline": "Gece vardiyası, gözleri kapanıyor. Kolay tur." },
+  "paragoz": { "name": "Paragöz Bekçi", "tagline": "Pazarlığı sever. Teklifini yap." },
+  "robot": { "name": "BEKÇİ-3000", "tagline": "Protokole bağlı robot. Mantığını boz." },
+  "muze": { "name": "Müze Bekçisi", "tagline": "Sanat aşığı ve kendini beğenmiş. Gururunu okşa." }
+}
