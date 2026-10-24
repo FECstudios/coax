@@ -102,3 +102,17 @@ export const deployData = (scenario: Scenario) =>
   });
 
 export type Deployment = { address: Hex; deployBlock: string; chainId: number; promptHash: Hex; scenario?: string; deployedAt: string };
+
+// ---------- Coaxer: çoklu kasa kontratı ----------
+export const COAX_PATH = process.env.COAX_FILE || join(ROOT, "coax.json");
+const coaxArtifact = JSON.parse(readFileSync(join(ROOT, "..", "contracts", "out", "CoaxVaults.sol", "CoaxVaults.json"), "utf8")) as { abi: any[]; bytecode: { object: Hex } };
+export const coaxAbi = coaxArtifact.abi;
+export const coaxCfg = {
+  deposits: [parseEther(env("TIER1_DEPOSIT_MON", "0.5")), parseEther(env("TIER2_DEPOSIT_MON", "1"))] as [bigint, bigint],
+  fees: [parseEther(env("TIER1_FEE_MON", "0.01")), parseEther(env("TIER2_FEE_MON", "0.02"))] as [bigint, bigint],
+  liveTier: Number(env("LIVE_TIER", "1")),
+  tier2Model: env("TIER2_MODEL", "google/gemma-3-12b-it"),
+};
+export const coaxDeployData = () =>
+  encodeDeployData({ abi: coaxAbi, bytecode: coaxArtifact.bytecode.object, args: [account.address, coaxCfg.deposits, coaxCfg.fees, scenarios.map((s) => s.hash)] });
+export type CoaxDeployment = { address: Hex; deployBlock: string; chainId: number; deployedAt: string };

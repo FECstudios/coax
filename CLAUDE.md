@@ -32,8 +32,9 @@ cd contracts && forge test --mt test_FinishPaysLastAttempter -vvv   # tek test
 # agent (cd agent)
 npm install
 npm run typecheck
-npm run deploy        # forge build + yeni tur deploy → agent/deployment.json
-npm start             # agent + http://localhost:3000 (oyuncu) + /screen.html (büyük ekran)
+npm run deploy        # forge build + CoaxVaults deploy → agent/coax.json (eski tur: npm run deploy:legacy)
+npm start             # Coaxer agent + http://localhost:3000 (Keşfet/Cüzdan/Profil) + /screen.html
+# eski tek-kasa akışı: npm run start:legacy · npm run deploy:legacy
 
 # yerel uçtan uca (gerçek API'siz)
 anvil &
@@ -97,6 +98,18 @@ Base `https://ai.hackclub.com/proxy/v1` (OpenAI uyumlu `/chat/completions`, `/mo
 - Kod/sayfa güncellemesi: `agent/scripts/push-nest.sh` (sunucunun `.env` ve `deployment.json`'unu ezmez, servisi yeniden başlatır).
 - Log: `ssh kuzey@hackclub.app journalctl -u kasa -f`. Durdur/başlat: `systemctl stop|start kasa`.
 - **Aynı anda tek agent:** Nest'teki çalışırken laptop'ta `npm start` yapma (aynı cüzdan → nonce çakışması, çift verdict/musluk).
+
+## Coaxer (çoklu kasa) sürümü — mevcut durum
+
+- Sayfalar: `/` (Keşfet · Kasa aç · Cüzdan · Profil), `/play.html?v=ID` (oyun), `/screen.html` (projeksiyon).
+- Kontrat `CoaxVaults.sol`: kasayı host açar, herkes ücretle dener, `verdict` sadece agent'tan gelir; kırılınca havuz oyuncuya, süre dolarsa host'a gider. Platform payı %5.
+- Oyun ekranında kontrat adresi ve `promptHash` gösterilir/kopyalanır; kırılma anında "Cüzdanda görüntüle" butonu çıkar.
+- Modlar: **Pratik** (ücretsiz, zincire yazılmaz, `/api/practice`), **Zor** (gerçek ücretli deneme) ve **Ajan** (3 otomatik saldırıyı pratik olarak dener).
+- Cüzdan: yatır QR'ı (`/qr.svg?text=`), otomatik cüzdan anahtar yedekleme, bağlı cüzdana bakiye taşıma.
+- Kasalarım: kilitli / host kazancı / dayanma oranı kartları, Aktif–Geçmiş sekmeleri ve süresi dolan kasada "Sonuçlandır".
+- Profil: istatistik, rozet, en iyi denemeler, hatıra rozet (zincirde NFT değil), liderlik tablosu, SSS ve ayarlar.
+- Yatırım tutarları varsayılan **0.5 / 1 MON** (`TIER1_DEPOSIT_MON`, `TIER2_DEPOSIT_MON`); deneme ücretleri 0.01 / 0.02 MON.
+- §12 farkları: `revealPrompt` yok; kırılma backend imzası yerine agent'ın doğrudan `verdict` çağrısıyla olur (sonuç aynı). Deneme mesajının tamamı zincire yazılır, yalnızca hash'i değil.
 
 ## Monad Testnet
 

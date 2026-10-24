@@ -3,8 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node src/index.ts",
-    "deploy": "cd ../contracts && PATH=\"$PATH:$HOME/.foundry/bin\" forge build && cd ../agent && node src/deploy.ts",
+    "start": "node src/coax.ts",
+    "deploy": "cd ../contracts && PATH=\"$PATH:$HOME/.foundry/bin\" forge build && cd ../agent && node src/coax-deploy.ts",
+    "start:legacy": "node src/index.ts",
+    "deploy:legacy": "cd ../contracts && PATH=\"$PATH:$HOME/.foundry/bin\" forge build && cd ../agent && node src/deploy.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

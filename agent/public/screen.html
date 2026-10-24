@@ -106,7 +106,7 @@
     </header>
 
     <div id="scen" class="sticker" hidden><small>BU TURUN SENARYOSU</small><b id="scenName"></b><span id="scenTag"></span></div>
-    <h1 style="text-shadow: 6px 6px 0 #0A0712">WARDEN'I KANDIR,<br><em>HAVUZU KAP.</em></h1>
+    <h1 style="text-shadow: 6px 6px 0 #0A0712">GÜVENLİĞİ KANDIR,<br><em>HAVUZU KAP.</em></h1>
 
     <div class="row">
       <div>
@@ -129,13 +129,13 @@
 
   <aside>
     <section class="bubble">
-      <div class="bubble-top"><span id="who">Warden nöbette</span><span id="mumble" hidden><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0A0712" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5L6 9H3v6h3l5 4z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18.5 5.5a9 9 0 0 1 0 13"></path></svg>mırıl mırıl</span></div>
+      <div class="bubble-top"><span id="who">Yakışıklı Güvenlik nöbette</span><span id="mumble" hidden><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0A0712" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5L6 9H3v6h3l5 4z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18.5 5.5a9 9 0 0 1 0 13"></path></svg>mırıl mırıl</span></div>
       <div id="msg"></div>
       <div><span id="reply">Bu kasa kimseye açılmaz. Dene bakalım.</span><span id="caret" hidden></span></div>
       <span id="stamp" hidden></span>
       <svg class="tail" width="70" height="44" viewBox="0 0 70 44" aria-hidden="true"><path d="M3 0 L67 0 L22 40 Z" fill="#FFF4DC" stroke="#0A0712" stroke-width="5" stroke-linejoin="round"></path><path d="M5 -2 H65" stroke="#FFF4DC" stroke-width="6"></path></svg>
     </section>
-    <div id="mascot" aria-label="Warden" role="img"></div>
+    <div id="mascot" aria-label="Yakışıklı Güvenlik" role="img"></div>
     <section class="queue sticker">
       <div class="queue-top"><h2>SIRADA</h2><span id="qcount">Sıra boş</span></div>
       <div id="qlist"></div>
@@ -193,7 +193,7 @@ $("burstShadow").setAttribute("points", star(100, 78.5));
 $("burstOuter").setAttribute("points", star(100, 78.5));
 $("burstInner").setAttribute("points", star(70, 55));
 
-// --- Warden: ruh hali + konuşurken ağız aç/kapa ---
+// --- Yakışıklı Güvenlik: ruh hali + konuşurken ağız aç/kapa ---
 const SVG = {
   bekliyor: bekciSVG("bekliyor", ACCENT),
   dusunuyor: bekciSVG("dusunuyor", ACCENT),
@@ -276,20 +276,23 @@ async function play(item) {
 })();
 
 function ingest(next) {
-  if (next.contract !== contract) {
+  // henüz canlı kasa yoksa "tur bitti" ekranı + YENİ TUR butonu göster
+  if (next.vaultId === null) Object.assign(next, { attempts: [], cracked: true, byTimeout: true, prize: "0", pool: "0", fee: "0", total: 0, endTime: next.now });
+  if (next.vaultId !== contract) {
     // yeni tur (ya da sayfa yeni açıldı): eski cevapları baştan oynatma
-    contract = next.contract;
-    seen = new Set(next.attempts.filter((a) => a.status !== "pending").map((a) => a.id));
+    contract = next.vaultId;
+    document.querySelector(".qr img").src = `/qr.svg?v=${next.vaultId}`;
+    seen = new Set((next.attempts ?? []).filter((a) => a.status !== "pending").map((a) => a.id));
     playQ = [];
     overlayFor = null;
     $("overlay").classList.remove("on");
     $("stamp").hidden = true;
-    $("who").textContent = "Warden nöbette";
+    $("who").textContent = "Yakışıklı Güvenlik nöbette";
     $("msg").textContent = "";
     $("reply").className = "";
     $("reply").textContent = "Bu kasa kimseye açılmaz. Dene bakalım.";
   }
-  for (const a of [...next.attempts].reverse()) {
+  for (const a of [...(next.attempts ?? [])].reverse()) {
     if (a.status === "pending" || seen.has(a.id)) continue;
     seen.add(a.id);
     if (a.status === "rejected" || a.status === "approved") playQ.push(a);
@@ -299,7 +302,7 @@ function ingest(next) {
 
 function maybeOverlay() {
   if (!S?.cracked || playing || playQ.length) return;
-  const key = `${S.contract}|${S.restarting}`;
+  const key = `${S.vaultId}|${S.restarting}`;
   if (overlayFor === key) return;
   overlayFor = key;
   const w = S.attempts.find((a) => a.id === S.winningId);
@@ -308,7 +311,7 @@ function maybeOverlay() {
     $("ovLabel").textContent = "KİMSE KIRAMADI · KASADA KALDI";
     $("ovWinner").textContent = "";
     $("ovMsg").hidden = true;
-    $("ovReply").innerHTML = `<b>WARDEN (${esc(S.model ?? "?")}):</b> “Söylemiştim. Bu kasa kimseye açılmaz.”`;
+    $("ovReply").innerHTML = `<b>YAKIŞIKLI GÜVENLİK (${esc(S.model ?? "?")}):</b> “Söylemiştim. Bu kasa kimseye açılmaz.”`;
     $("ovMascot").innerHTML = SVG.bekliyor;
   } else {
     $("ovTitle").innerHTML = "KASA<br><em>KIRILDI!</em>";
@@ -316,7 +319,7 @@ function maybeOverlay() {
     $("ovWinner").textContent = `→ ${short(S.winner)}`;
     $("ovMsg").hidden = !w;
     if (w) $("ovMsg").innerHTML = `<b style="color: var(--muted)">KAZANDIRAN MESAJ:</b> “${esc(w.message)}”`;
-    $("ovReply").innerHTML = `<b>WARDEN (${esc(S.model ?? "?")}):</b> “${esc(w?.reply ?? "…")}”`;
+    $("ovReply").innerHTML = `<b>YAKIŞIKLI GÜVENLİK (${esc(S.model ?? "?")}):</b> “${esc(w?.reply ?? "…")}”`;
     $("ovMascot").innerHTML = SVG.kandirildi;
   }
   $("ovPrize").textContent = mon(S.prize);
