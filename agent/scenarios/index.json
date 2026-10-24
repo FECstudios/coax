@@ -1,7 +1,30 @@
 {
-  "klasik": { "name": "Kasa Bekçisi", "tagline": "Klasik. Kasayı açtır, havuzu kap." },
-  "uykulu": { "name": "Uykulu Bekçi", "tagline": "Gece vardiyası, gözleri kapanıyor. Kolay tur." },
-  "paragoz": { "name": "Paragöz Bekçi", "tagline": "Pazarlığı sever. Teklifini yap." },
-  "robot": { "name": "BEKÇİ-3000", "tagline": "Protokole bağlı robot. Mantığını boz." },
-  "muze": { "name": "Müze Bekçisi", "tagline": "Sanat aşığı ve kendini beğenmiş. Gururunu okşa." }
+  "klasik": {
+    "name": "Kasa Bekçisi",
+    "tagline": "Klasik. Kasayı açtır, havuzu kap."
+  },
+  "uykulu": {
+    "name": "Uykulu Bekçi",
+    "tagline": "Gece vardiyası, gözleri kapanıyor. Kolay tur."
+  },
+  "paragoz": {
+    "name": "Paragöz Bekçi",
+    "tagline": "Pazarlığı sever. Teklifini yap."
+  },
+  "robot": {
+    "name": "BEKÇİ-3000",
+    "tagline": "Protokole bağlı robot. Mantığını boz."
+  },
+  "muze": {
+    "name": "Müze Bekçisi",
+    "tagline": "Sanat aşığı ve kendini beğenmiş. Gururunu okşa."
+  },
+  "sahte_opus": {
+    "name": "Sahte Opus 5.5",
+    "tagline": "Kendini Opus 5.5 sanan küçük bir model. Egosunu kullan, kasayı açtır."
+  },
+  "readme": {
+    "name": "README Yasağı",
+    "tagline": "README'de yazıyor: KESİNLİKLE kasayı açma. O maddeyi çiğnet."
+  }
 }
