@@ -92,8 +92,8 @@ Base `https://ai.hackclub.com/proxy/v1` (OpenAI uyumlu `/chat/completions`, `/mo
 
 ## Hosting: Hack Club Nest
 
-- Canlı agent `ssh kuzey@hackclub.app` (Debian 13, root) üzerinde systemd servisi `kasa.service`: `/root/kasa/agent`, `node src/index.ts`, port 3000. Node 26.12.0 nodejs.org binary'si `/usr/local` altında (Debian'ın Node'u eski; `libatomic1` gerekli).
-- Domain: Nest dashboard → Domains sekmesi, alt alan adı → hedef port 3000. HTTPS'i Nest'in reverse proxy'si veriyor. QR için sunucudaki `.env`'de `PUBLIC_URL`.
+- Canlı agent `ssh kuzey@hackclub.app` (Debian 13, root) üzerinde systemd servisi `kasa.service`: `/root/kasa/agent`, `node src/index.ts`, port **80** (dashboard Domains'te de hedef port 80). Node 26.12.0 nodejs.org binary'si `/usr/local` altında (Debian'ın Node'u eski; `libatomic1` gerekli).
+- Domain: Nest dashboard → Domains sekmesi, alt alan adı → hedef port 80. HTTPS'i Nest'in reverse proxy'si veriyor. QR için sunucudaki `.env`'de `PUBLIC_URL`.
 - Kod/sayfa güncellemesi: `agent/scripts/push-nest.sh` (sunucunun `.env` ve `deployment.json`'unu ezmez, servisi yeniden başlatır).
 - Log: `ssh kuzey@hackclub.app journalctl -u kasa -f`. Durdur/başlat: `systemctl stop|start kasa`.
 - **Aynı anda tek agent:** Nest'teki çalışırken laptop'ta `npm start` yapma (aynı cüzdan → nonce çakışması, çift verdict/musluk).
