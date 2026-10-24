@@ -35,6 +35,9 @@
   .featured .big { font-family: 'IBM Plex Mono', monospace; font-size: 34px; color: var(--gold); }
   .badge { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; padding: 2px 8px; border-radius: 6px; border: 1px solid #5A6A9A; color: #B9C4E6; }
   .badge.t2 { border-color: var(--gold); color: var(--gold); }
+  .badge.t3 { border-color: #FF9F5A; color: #FF9F5A; }
+  .badge.t4 { border-color: #FF6B9A; color: #FF6B9A; }
+  .badge.t5 { border-color: var(--red); color: var(--red); }
   .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
   select, input { background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 10px; min-height: 44px; padding: 0 12px; font: 14px Inter, sans-serif; }
   label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
@@ -80,6 +83,15 @@
   body.compact h2 { margin-top: 16px; }
   [hidden] { display: none !important; }
   #toast:empty { display: none; }
+  body.light { --bg: #F7F4EC; --card: #FFFFFF; --line: #D8D2C4; --text: #181D2A; --muted: #5B6478; --gold: #A76D00; --green: #087A52; --red: #C23535; }
+  body.light header { background: var(--bg); }
+  body.light .opt span, body.light .badgeCard.on { background: #FFF9EA; }
+  body.light .tbl tr.click:hover td { background: #F0EDE4; }
+  body.light #profileCard { background: linear-gradient(135deg, #F0E6C8, var(--card)) !important; }
+  body.anim-low * { animation-duration: 0.15s !important; transition-duration: 0.12s !important; }
+  body.anim-off *, body.reduced-motion * { animation: none !important; transition: none !important; }
+  .modalBack { position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,.65); display: grid; place-items: center; padding: 16px; }
+  .modalBack .card { max-width: 560px; width: 100%; max-height: 85vh; overflow: auto; }
 </style>
 </head>
 <body>
@@ -127,11 +139,18 @@
     <h2>2. Seviye</h2>
     <div class="opts" id="tierOpts"></div>
     <h2>3. Süre</h2>
-    <div class="opts">
-      <label class="opt"><input type="radio" name="dur" value="1800"><span><b>30 dk</b></span></label>
-      <label class="opt"><input type="radio" name="dur" value="7200" checked><span><b>2 saat</b></span></label>
-      <label class="opt"><input type="radio" name="dur" value="86400"><span><b>24 saat</b></span></label>
+    <div class="filters" style="align-items: end">
+      <label class="f">Süre<input id="durVal" type="number" min="10" max="525600" step="1" value="120" inputmode="numeric" style="width: 140px"></label>
+      <label class="f">Birim<select id="durUnit"><option value="60">dakika</option><option value="3600">saat</option><option value="86400">gün</option></select></label>
     </div>
+    <div class="seg" id="durPresets" style="margin-top: 8px; flex-wrap: wrap">
+      <button type="button" data-dur="600">10 dk</button>
+      <button type="button" data-dur="3600">1 saat</button>
+      <button type="button" data-dur="86400">1 gün</button>
+      <button type="button" data-dur="604800">1 hafta</button>
+      <button type="button" data-dur="31536000">1 yıl</button>
+    </div>
+    <p class="muted" id="durHint" style="margin: 8px 0 0; font-size: 12px">En az 10 dakika, en fazla 365 gün.</p>
     <h2>4. Kişilik</h2>
     <label class="f">Yakışıklı Güvenlik'in kişiliği (sistem prompt'u platformun şablonundan gelir)<select id="persona"></select></label>
     <p class="muted" id="personaTag" style="margin: 6px 0 0"></p>
@@ -160,9 +179,20 @@
         <button class="btn" id="useBurner" type="button" hidden>Otomatik cüzdana dön</button>
       </div>
       <div id="walletPick" hidden style="flex-basis: 100%; display: grid; gap: 8px">
+        <small class="muted">Kurulu cüzdanlar:</small>
+        <div id="walletProviders" style="display: flex; gap: 8px; flex-wrap: wrap"></div>
         <small class="muted">Bu tarayıcıda cüzdan yok. Sayfayı cüzdan uygulamanın içinde aç:</small>
         <a class="btn" id="wlMM">MetaMask'ta aç</a><a class="btn" id="wlCB">Coinbase Wallet'ta aç</a><a class="btn" id="wlTW">Trust Wallet'ta aç</a>
       </div>
+      <details style="flex-basis: 100%; border-bottom: 0; padding: 0">
+        <summary style="font-size: 13px; color: var(--muted)">Hesap koduyla bağla (adres yapıştır)</summary>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px">
+          <input id="linkAddr" placeholder="0x… cüzdan adresin" style="flex: 1; min-width: 220px">
+          <button class="btn" id="linkWallet" type="button">Hesabı bağla</button>
+          <button class="btn" id="linkPermission" type="button">Cüzdan izni iste</button>
+        </div>
+        <small class="muted" id="linkMsg" style="display: block; margin-top: 6px">Adresi profilinde saklarız; dilersen tarayıcı cüzdanından izin isteyip aynı hesabı doğrularız.</small>
+      </details>
     </div>
     <div class="card" style="margin-top: 8px">
       <small class="muted">Toplam bakiye</small>
@@ -236,12 +266,31 @@
   </section>
 
   <section id="profile" hidden>
-    <div class="card" style="margin-top: 8px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap">
-      <div style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, var(--gold), #FF8A8A); display: grid; place-items: center; font-size: 30px">🕵️</div>
+    <div class="card" id="profileCard" style="margin-top: 8px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; background: linear-gradient(135deg, #1D2438, var(--card))">
+      <div id="pAvatar" style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, var(--gold), #FF8A8A); display: grid; place-items: center; font-size: 30px">🕵️</div>
       <div style="flex: 1; min-width: 200px">
-        <b>Oyuncu profili</b>
+        <b id="pName">Oyuncu profili</b>
+        <span class="badge" id="pVisibility" style="margin-left: 6px">Herkese açık</span>
         <div class="mono muted" style="font-size: 13px; word-break: break-all" id="pAddr">…</div>
         <span class="badge" id="pKind">Otomatik cüzdan</span>
+        <span class="badge" id="pLinked" hidden></span>
+      </div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap">
+        <button class="btn" id="pEditToggle" type="button">Profili düzenle</button>
+        <button class="btn" id="pShare" type="button">Profili paylaş</button>
+      </div>
+    </div>
+    <div class="card" id="pEdit" hidden style="margin-top: 8px; display: grid; gap: 10px">
+      <div class="grid4">
+        <label class="f">Kullanıcı adı<input id="pNameInput" maxlength="24" placeholder="ör. kasaavcısı"></label>
+        <label class="f">Avatar<select id="pAvatarInput"><option>🕵️</option><option>🦊</option><option>🐺</option><option>🐦</option><option>🤖</option><option>👑</option><option>🔥</option><option>🧠</option></select></label>
+        <label class="f">Banner<select id="pBannerInput"><option value="gold">Altın</option><option value="night">Gece</option><option value="mint">Mint</option><option value="fire">Ateş</option></select></label>
+        <label class="f">Görünürlük<select id="pVisInput"><option value="public">Herkese açık</option><option value="friends">Sadece bağlantılar</option><option value="private">Gizli</option></select></label>
+      </div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap">
+        <button class="btn primary" id="pSave" type="button">Kaydet</button>
+        <button class="btn" id="pCopyLink" type="button">Profil linkini kopyala</button>
+        <small class="muted" id="pSaveMsg"></small>
       </div>
     </div>
 
@@ -258,6 +307,9 @@
 
     <h2>En iyi denemeler</h2>
     <div id="pBestList"><p class="muted">Henüz onaylanan bir denemen yok. Pratik modda ısın, sonra Zor modda dene.</p></div>
+
+    <h2>Son aktivite</h2>
+    <div class="card feed" id="pActivity"><span class="muted">Henüz aktivite yok.</span></div>
 
     <h2>Rozet NFT</h2>
     <div class="card nft">
@@ -285,16 +337,68 @@
       <details><summary>Gerçek para mı?</summary><p>Hayır. Sadece Monad Testnet kullanılır; testnet MON'un parasal değeri yoktur.</p></details>
     </div>
 
-    <h2>Ayarlar</h2>
-    <div class="card">
+    <h2>Genel ayarlar</h2>
+    <div class="card" style="display: grid; gap: 10px">
+      <div class="grid4">
+        <label class="f">Tema<select id="setTheme"><option value="dark">Koyu</option><option value="light">Açık</option><option value="system">Sistem</option></select></label>
+        <label class="f">Dil<select id="setLang"><option value="tr">Türkçe</option><option value="en">English</option></select></label>
+        <label class="f">Animasyon<select id="setAnim"><option value="full">Tam</option><option value="low">Azaltılmış</option><option value="off">Kapalı</option></select></label>
+        <label class="f">Sayı biçimi<select id="setNum"><option value="2">2 hane</option><option value="4">4 hane</option><option value="6">6 hane</option></select></label>
+      </div>
+      <label class="switch"><span>Ses efektleri</span><input type="checkbox" id="setSound"></label>
+      <label class="switch"><span>Arka plan müziği</span><input type="checkbox" id="setMusic"></label>
+      <label class="switch"><span>Titreşim / haptik geri bildirim</span><input type="checkbox" id="setHaptic"></label>
+      <label class="switch"><span>Hareketi azalt (reduced motion)</span><input type="checkbox" id="setMotion"></label>
       <label class="switch"><span>İşlemlerde onay sorma (kapalı önerilir)</span><input type="checkbox" id="setSkipConfirm"></label>
       <label class="switch"><span>Sadece aktif kasaları göster (Keşfet varsayılanı)</span><input type="checkbox" id="setActiveOnly"></label>
-      <label class="switch"><span>Kompozisyonu sadeleştir</span><input type="checkbox" id="setCompact"></label>
-      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px">
+      <label class="switch"><span>Kompakt arayüz</span><input type="checkbox" id="setCompact"></label>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px">
         <button class="btn" id="setResetScope" type="button">Filtreleri sıfırla</button>
         <button class="btn" id="setResetWallet" type="button" style="color: var(--red); border-color: var(--red)">Otomatik cüzdanı sıfırla</button>
       </div>
       <p class="muted" style="font-size: 12px; margin-bottom: 0">Otomatik cüzdanı sıfırlarsan içindeki MON'a erişimi kaybedersin. Önce anahtarını yedekle veya bakiyeyi taşı.</p>
+    </div>
+
+    <h2>Güvenlik ve gizlilik</h2>
+    <div class="card" style="display: grid; gap: 10px">
+      <label class="f">E-posta / giriş bilgisi (yerel)<input id="setEmail" type="email" placeholder="ornek@mail.com"></label>
+      <div><small class="muted">Bağlı cüzdan</small><div class="mono" style="font-size: 13px; word-break: break-all" id="setLinked">—</div></div>
+      <div><small class="muted">Aktif oturumlar ve cihazlar</small><div id="setSessions" style="font-size: 13px"></div></div>
+      <label class="switch"><span>İki adımlı doğrulama (yerel demo)</span><input type="checkbox" id="set2fa"></label>
+      <label class="switch"><span>Profil istatistiklerim herkese görünsün</span><input type="checkbox" id="setPublicStats"></label>
+      <label class="switch"><span>Denemelerim son aktivitede görünsün</span><input type="checkbox" id="setPublicActivity"></label>
+      <label class="f">Engellenen kullanıcılar<input id="setBlockAddr" placeholder="0x… adres"></label>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn" id="setBlockAdd" type="button">Engelle</button><button class="btn" id="setDataExport" type="button">Verilerimi indir</button><button class="btn" id="setDeleteAccount" type="button" style="color: var(--red); border-color: var(--red)">Hesabımı sil</button></div>
+      <div id="setBlockedList" class="muted" style="font-size: 13px"></div>
+    </div>
+
+    <h2>Bildirimler</h2>
+    <div class="card">
+      <label class="switch"><span>Günlük ödül hatırlatıcıları</span><input type="checkbox" id="notifDaily"></label>
+      <label class="switch"><span>Görev tamamlama bildirimleri</span><input type="checkbox" id="notifMission"></label>
+      <label class="switch"><span>Sıralama değişiklikleri</span><input type="checkbox" id="notifRank"></label>
+      <label class="switch"><span>Arkadaşlık istekleri</span><input type="checkbox" id="notifFriend"></label>
+      <label class="switch"><span>Özel etkinlikler</span><input type="checkbox" id="notifEvent"></label>
+      <label class="switch"><span>Ödül talep onayları</span><input type="checkbox" id="notifReward"></label>
+      <div style="margin-top: 10px"><button class="btn" id="notifPermission" type="button">Tarayıcı bildirim izni iste</button></div>
+    </div>
+
+    <h2>Yardım ve destek</h2>
+    <div class="card" style="display: grid; gap: 8px">
+      <div style="display: flex; gap: 8px; flex-wrap: wrap">
+        <button class="btn" id="helpTutorial" type="button">Etkileşimli eğitim</button>
+        <button class="btn" id="helpTerms" type="button">Kullanım şartları</button>
+        <button class="btn" id="helpPrivacy" type="button">Gizlilik politikası</button>
+      </div>
+      <details><summary>Oyun kuralları ve olasılıklar</summary><p>Her deneme bağımsızdır. Kasa açılma olasılığı seçilen zorluk seviyesine ve bekçinin cevabına göre değişir; yüksek seviyelerde daha güçlü model kullanılır. Platform payı her deneme ücretinin %5'idir. Havuz ya kırana ya da süre sonunda host'a gider.</p></details>
+      <label class="f">Hata bildirimi<textarea id="helpBug" rows="3" placeholder="Ne oldu?"></textarea></label>
+      <label class="f">Ekran görüntüsü (isteğe bağlı)<input id="helpBugShot" type="file" accept="image/*"></label>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn" id="helpBugSend" type="button">Raporu gönder</button><button class="btn" id="helpContact" type="button">Destekle iletişim</button></div>
+      <label class="f">Oyuncu bildir<input id="helpReportAddr" placeholder="0x… adres"></label>
+      <textarea id="helpReportReason" rows="2" placeholder="Sebep"></textarea>
+      <button class="btn" id="helpReportSend" type="button" style="justify-self: start">Oyuncuyu bildir</button>
+      <small class="muted">Sürüm 2.0.0 · Çoklu varlık ve 5 zorluk seviyesi</small>
+      <small class="muted">Sürüm notları: USDC/WETH/WMON desteği, 5 seviye, 10 dk–1 yıl süre, cüzdan ve profil ayarları.</small>
     </div>
     <p class="muted" style="font-size: 12px; text-align: center; margin-top: 24px">Coaxer · Monad Testnet · Testnet MON gerçek para değildir</p>
   </section>
@@ -309,7 +413,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 const short = (a) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "");
 const mon = (w, d = 2) => Number(formatEther(BigInt(w))).toFixed(d);
 const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
-const toast = (t) => { $("toast").innerHTML = t; };
+const toast = (t) => { $("toast").innerHTML = t; try { beep(); haptic(); } catch {} };
 const abi = parseAbi([
   "function openVault(address asset, uint8 tier, uint64 duration, bytes32 promptHash) payable returns (uint256)",
   "function settle(uint256 id)",
@@ -319,7 +423,8 @@ const erc20 = parseAbi([
   "function allowance(address owner, address spender) view returns (uint256)",
   "function approve(address spender, uint256 amount) returns (bool)",
 ]);
-const TIER = { 1: "ORTA", 2: "YÜKSEK" };
+const TIER = { 1: "ORTA", 2: "YÜKSEK", 3: "ZOR", 4: "EFSANE", 5: "KÂBUS" };
+const tcls = (t) => (Number(t) > 1 ? `t${t}` : "");
 const NATIVE = "0x0000000000000000000000000000000000000000";
 
 let V = await (await fetch("/api/vaults")).json();
@@ -327,8 +432,9 @@ let offset = V.now - Date.now() / 1000;
 const nowS = () => Math.floor(Date.now() / 1000 + offset);
 const assetOf = (addr) => V.assets.find((a) => a.address.toLowerCase() === String(addr ?? "").toLowerCase()) ?? V.assets[0];
 const sym = (addr) => assetOf(addr).symbol;
+let numPref = 2;
 const fmt = (raw, asset, d = 2) => Number(formatUnits(BigInt(raw ?? 0), asset.decimals)).toFixed(d);
-const fmtA = (raw, asset) => { const n = Number(formatUnits(BigInt(raw ?? 0), asset.decimals)); if (!n) return "0"; return n >= 1 ? n.toFixed(2) : n >= 0.01 ? n.toFixed(4) : n.toFixed(6); };
+const fmtA = (raw, asset) => { const n = Number(formatUnits(BigInt(raw ?? 0), asset.decimals)); if (!n) return "0"; return n >= 1 ? n.toFixed(numPref) : n >= 0.01 ? n.toFixed(Math.max(2, numPref)) : n.toFixed(6); };
 const amounts = (map, d = 2) => Object.entries(map ?? {}).filter(([, v]) => BigInt(v) > 0n)
   .map(([s, v]) => { const a = V.assets.find((x) => x.symbol === s); return `${fmt(v, a, d)} ${s}`; }).join(" · ") || "0";
 const chain = defineChain({ id: V.chainId, name: "Monad Testnet", nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 }, rpcUrls: { default: { http: [V.rpcUrl] } } });
@@ -340,7 +446,17 @@ if (!key) { key = generatePrivateKey(); store.set("kasa-burner", key); }
 const burner = privateKeyToAccount(key);
 const burnerWallet = createWalletClient({ chain, account: burner, transport: http() });
 let me = { kind: "burner", address: burner.address, wallet: burnerWallet };
+let linkedWallet = store.get("coax-linked-wallet") || "";
 let bal = 0n, locked = {}, bals = {}, accData = null, ktab = "active";
+function setLinkedWallet(a) {
+  if (!isAddress(a)) return false;
+  linkedWallet = getAddress(a);
+  store.set("coax-linked-wallet", linkedWallet);
+  $("linkAddr").value = linkedWallet;
+  renderProfile();
+  if (typeof renderLinkedSettings === "function") renderLinkedSettings();
+  return true;
+}
 function setKTab(t) {
   ktab = t === "history" ? "history" : "active";
   for (const b of document.querySelectorAll("[data-ktab]")) b.setAttribute("aria-pressed", String(b.dataset.ktab === ktab));
@@ -348,16 +464,22 @@ function setKTab(t) {
 }
 for (const b of document.querySelectorAll("[data-ktab]")) b.onclick = () => setKTab(b.dataset.ktab);
 
-async function useInjected(prompt) {
-  const eth = window.ethereum;
-  if (!eth) {
-    const target = `${location.origin}${location.pathname}?wallet=1`;
-    $("wlMM").href = `https://metamask.app.link/dapp/${location.host}${location.pathname}?wallet=1`;
-    $("wlCB").href = `https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(target)}`;
-    $("wlTW").href = `https://link.trustwallet.com/open_url?coin_id=60&url=${encodeURIComponent(target)}`;
-    $("walletPick").hidden = false;
-    return false;
-  }
+const providers = new Map();
+window.addEventListener("eip6963:announceProvider", (e) => {
+  const d = e.detail;
+  if (d?.info?.uuid && d.provider) { providers.set(d.info.uuid, d); renderProviders(); }
+});
+window.dispatchEvent(new Event("eip6963:requestProvider"));
+function renderProviders() {
+  const box = $("walletProviders");
+  if (!box) return;
+  box.innerHTML = [...providers.values()].map((p) => `<button class="btn" type="button" data-provider="${esc(p.info.uuid)}">${esc(p.info.name)}</button>`).join("");
+  for (const b of box.querySelectorAll("[data-provider]")) b.onclick = () => {
+    const p = providers.get(b.dataset.provider);
+    if (p) useProvider(p.provider, true).catch((e) => toast(`Cüzdan: ${esc(e.shortMessage || e.message)}`));
+  };
+}
+async function useProvider(eth, prompt) {
   const accounts = await eth.request({ method: prompt ? "eth_requestAccounts" : "eth_accounts" });
   if (!accounts.length) return false;
   const chainHex = "0x" + V.chainId.toString(16);
@@ -369,10 +491,24 @@ async function useInjected(prompt) {
   const address = getAddress(accounts[0]);
   me = { kind: "injected", address, wallet: createWalletClient({ chain, account: address, transport: custom(eth) }) };
   store.set("kasa-mode", "injected");
+  setLinkedWallet(address);
   $("walletPick").hidden = true;
   toast(`Cüzdan bağlandı: <span class="mono">${esc(short(address))}</span>`);
   showWallet();
   return true;
+}
+async function useInjected(prompt) {
+  const eth = window.ethereum;
+  if (!eth) {
+    const target = `${location.origin}${location.pathname}?wallet=1`;
+    $("wlMM").href = `https://metamask.app.link/dapp/${location.host}${location.pathname}?wallet=1`;
+    $("wlCB").href = `https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(target)}`;
+    $("wlTW").href = `https://link.trustwallet.com/open_url?coin_id=60&url=${encodeURIComponent(target)}`;
+    $("walletPick").hidden = false;
+    renderProviders();
+    return false;
+  }
+  return useProvider(eth, prompt);
 }
 function useBurner() { me = { kind: "burner", address: burner.address, wallet: burnerWallet }; store.set("kasa-mode", "burner"); $("walletPick").hidden = true; showWallet(); }
 function showWallet() {
@@ -389,10 +525,27 @@ function showWallet() {
   $("keyText").textContent = key;
   $("pAddr").textContent = me.address;
   $("pKind").textContent = me.kind === "burner" ? "Otomatik cüzdan" : "Bağlı cüzdan";
+  if (!$("linkAddr").value) $("linkAddr").value = linkedWallet || me.address;
   refreshAccount();
 }
 $("connect").onclick = () => useInjected(true).catch((e) => toast(`Cüzdan: ${esc(e.shortMessage || e.message)}`));
 $("useBurner").onclick = useBurner;
+$("linkWallet").onclick = () => {
+  const a = $("linkAddr").value.trim();
+  if (!isAddress(a)) return toast("Geçerli bir cüzdan adresi yapıştır (0x…).");
+  if (setLinkedWallet(a)) toast("Hesap profiline bağlandı.");
+};
+$("linkPermission").onclick = async () => {
+  if (!window.ethereum) { $("walletPick").hidden = false; renderProviders(); return toast("Bu tarayıcıda cüzdan bulunamadı. Adresi yapıştırarak bağlayabilirsin."); }
+  try {
+    const ok = await useInjected(true);
+    if (ok) {
+      setLinkedWallet(me.address);
+      $("linkMsg").textContent = "Cüzdan izni verildi ve hesap profiline bağlandı.";
+      toast("Cüzdan izni verildi, hesap bağlandı.");
+    }
+  } catch (e) { toast(`Cüzdan izni: ${esc(e.shortMessage || e.message)}`); }
+};
 const copy = (t, msg) => navigator.clipboard?.writeText(t).then(() => toast(msg)).catch(() => toast("Kopyalanamadı."));
 $("copy").onclick = () => copy(me.address, "Adres kopyalandı.");
 $("depCopy").onclick = () => copy(me.address, "Yatırma adresi kopyalandı.");
@@ -428,7 +581,7 @@ function renderExplore() {
   const active = V.vaults.filter((v) => !v.settled && left(v) > 0);
   const top = [...active].sort((a, b) => Number(BigInt(b.pool) - BigInt(a.pool)))[0];
   $("featured").innerHTML = top
-    ? `<div><div class="muted" style="font-size: 13px">#${top.id} · ${esc(hostName(top))} · <span class="badge ${top.tier === 2 ? "t2" : ""}">${TIER[top.tier]}</span> · ${esc(top.assetSymbol)} · ${esc(top.scenario?.name ?? "")}</div><div class="big">${fmt(top.pool, assetOf(top.asset))} <span class="muted" style="font-size: 16px">${esc(top.assetSymbol)}</span></div><div class="muted mono" style="font-size: 13px">${fmtLeft(left(top))} kaldı · ${top.attempts} deneme</div></div><a class="btn primary" href="/play.html?v=${top.id}">Kasayı görüntüle</a>`
+    ? `<div><div class="muted" style="font-size: 13px">#${top.id} · ${esc(hostName(top))} · <span class="badge ${tcls(top.tier)}">${TIER[top.tier]}</span> · ${esc(top.assetSymbol)} · ${esc(top.scenario?.name ?? "")}</div><div class="big">${fmt(top.pool, assetOf(top.asset))} <span class="muted" style="font-size: 16px">${esc(top.assetSymbol)}</span></div><div class="muted mono" style="font-size: 13px">${fmtLeft(left(top))} kaldı · ${top.attempts} deneme</div></div><a class="btn primary" href="/play.html?v=${top.id}">Kasayı görüntüle</a>`
     : `<span class="muted">Aktif kasa yok. İlk kasayı sen aç.</span>`;
   let list = V.vaults.filter((v) => !$("fTier").value || String(v.tier) === $("fTier").value);
   const st = $("fStatus").value;
@@ -438,7 +591,7 @@ function renderExplore() {
   list.sort((a, b) => (so === "pool" ? Number(BigInt(b.pool) - BigInt(a.pool)) : so === "time" ? left(a) - left(b) : b.id - a.id));
   $("vaultRows").innerHTML = list.map((v) => {
     const a = assetOf(v.asset);
-    return `<tr class="click" data-v="${v.id}"><td>#${v.id} ${esc(hostName(v))} <span class="badge ${v.tier === 2 ? "t2" : ""}">${TIER[v.tier]}</span> <span class="badge">${esc(v.assetSymbol)}</span><br><small class="muted">${esc(v.scenario?.name ?? "")}</small></td><td class="num">${fmtA(v.settled ? v.prize : v.pool, a)} ${esc(v.assetSymbol)}</td><td class="num">${fmtA(v.fee, a)} ${esc(v.assetSymbol)}</td><td class="num">${v.attempts}</td><td class="num">${v.settled ? "—" : fmtLeft(left(v))}</td><td class="${v.settled && !v.byTimeout ? "neg" : v.settled ? "muted" : "pos"}">${status(v)}</td></tr>`;
+    return `<tr class="click" data-v="${v.id}"><td>#${v.id} ${esc(hostName(v))} <span class="badge ${tcls(v.tier)}">${TIER[v.tier]}</span> <span class="badge">${esc(v.assetSymbol)}</span><br><small class="muted">${esc(v.scenario?.name ?? "")}</small></td><td class="num">${fmtA(v.settled ? v.prize : v.pool, a)} ${esc(v.assetSymbol)}</td><td class="num">${fmtA(v.fee, a)} ${esc(v.assetSymbol)}</td><td class="num">${v.attempts}</td><td class="num">${v.settled ? "—" : fmtLeft(left(v))}</td><td class="${v.settled && !v.byTimeout ? "neg" : v.settled ? "muted" : "pos"}">${status(v)}</td></tr>`;
   }).join("") || `<tr><td colspan="6" class="muted">Bu filtrede kasa yok.</td></tr>`;
   for (const tr of document.querySelectorAll("#vaultRows tr.click")) tr.onclick = () => (location.href = `/play.html?v=${tr.dataset.v}`);
   $("feed").innerHTML = V.events.map((e) => `<div><span class="mono">${e.kind === "cracked" ? short(e.who) : `#${e.vault}`}</span><span>${e.kind === "cracked" ? `#${e.vault} kasasını kırdı` : "kasası dayandı · host"}</span><span class="mono ${e.kind === "cracked" ? "pos" : ""}">+${fmt(e.amount, assetOf(e.asset))} ${esc(e.assetSymbol)}</span><span class="muted">${e.time ? ago(e.time) : ""}</span><a href="${V.explorerTx}${e.tx}" target="_blank" rel="noopener">↗</a></div>`).join("") || `<span class="muted">Henüz olay yok.</span>`;
@@ -450,33 +603,49 @@ $("asset").innerHTML = V.assets.map((a) => `<option value="${a.address}">${esc(a
 $("persona").innerHTML = V.scenarios.map((s) => `<option value="${s.hash}">${esc(s.name)}</option>`).join("");
 const sel = (n) => document.querySelector(`input[name="${n}"]:checked`).value;
 const currentAsset = () => assetOf($("asset").value);
+const DUR_MIN = 600, DUR_MAX = 31536000;
+const durSec = () => Math.round(Number($("durVal").value || 0) * Number($("durUnit").value || 60));
+const durText = (s) => s % 86400 === 0 ? `${s / 86400} gün` : s % 3600 === 0 ? `${s / 3600} saat` : `${Math.round(s / 60)} dakika`;
+function updateDurUi() {
+  const s = durSec();
+  $("sDur").textContent = s >= DUR_MIN && s <= DUR_MAX ? durText(s) : "geçersiz";
+  for (const b of document.querySelectorAll("#durPresets button")) b.setAttribute("aria-pressed", String(Number(b.dataset.dur) === s));
+}
+for (const b of document.querySelectorAll("#durPresets button")) b.onclick = () => {
+  $("durUnit").value = "60";
+  $("durVal").value = String(Number(b.dataset.dur) / 60);
+  updateDurUi(); renderSummary();
+};
+for (const id of ["durVal", "durUnit"]) $(id).addEventListener("input", () => { updateDurUi(); renderSummary(); });
 function renderTiers() {
   const a = currentAsset();
-  $("tierOpts").innerHTML = [1, 2].map((t) => {
+  const ts = Object.keys(a.tiers).map(Number).sort((x, y) => x - y);
+  $("tierOpts").innerHTML = ts.map((t) => {
     const tier = a.tiers[t];
-    return `<label class="opt"><input type="radio" name="tier" value="${t}" ${t === 2 ? "checked" : ""}><span><span class="badge ${t === 2 ? "t2" : ""}">${TIER[t]}</span><div class="mono" style="font-size: 20px; margin-top: 8px">${fmtA(tier.deposit, a)} ${esc(a.symbol)}</div><small class="muted">Deneme ücreti ${fmtA(tier.fee, a)} ${esc(a.symbol)} · ${t === 2 ? "zor, güçlü model" : "daha kolay, deneme çeker"}</small></span></label>`;
+    return `<label class="opt"><input type="radio" name="tier" value="${t}" ${t === ts[0] ? "checked" : ""}><span><span class="badge t${t}">${TIER[t] ?? `SEVİYE ${t}`}</span><div class="mono" style="font-size: 20px; margin-top: 8px">${fmtA(tier.deposit, a)} ${esc(a.symbol)}</div><small class="muted">Deneme ücreti ${fmtA(tier.fee, a)} ${esc(a.symbol)} · ${t >= 4 ? "çok zor, güçlü model" : t === 1 ? "daha kolay, deneme çeker" : "zorlaşan model"}</small></span></label>`;
   }).join("");
   renderSummary();
 }
 function renderSummary() {
-  const a = currentAsset(), t = Number(sel("tier")), d = Number(sel("dur"));
+  const a = currentAsset(), t = Number(sel("tier")), d = durSec();
   const dep = BigInt(a.tiers[t].deposit), fee = BigInt(a.tiers[t].fee);
   $("sDep").textContent = `${fmtA(dep, a)} ${a.symbol}`;
   $("sFee").textContent = `${fmtA(fee, a)} ${a.symbol}`;
-  $("sDur").textContent = { 1800: "30 dk", 7200: "2 saat", 86400: "24 saat" }[d];
+  updateDurUi();
   $("sEst").textContent = `+${fmtA((fee * 100n * 95n) / 100n, a)} ${a.symbol}`;
   $("sRisk").textContent = `Kasa kırılırsa yatırdığın ${fmtA(dep, a)} ${a.symbol} ve toplanan ücretler kırana gider.`;
   $("personaTag").textContent = V.scenarios.find((s) => s.hash === $("persona").value)?.tagline ?? "";
   const have = bals[a.address.toLowerCase()] ?? 0n;
   const nativeNeed = a.address === NATIVE ? dep + 20_000_000_000_000_000n : 0n;
   const missing = (nativeNeed > have ? nativeNeed - have : 0n) + (a.address !== NATIVE && dep > have ? dep - have : 0n);
-  $("create").disabled = missing > 0n;
-  $("create").textContent = missing > 0n ? `Yetersiz bakiye · ${fmtA(missing, a)} ${a.symbol} eksik` : "Kasa oluştur";
+  const badDur = d < DUR_MIN || d > DUR_MAX;
+  $("create").disabled = badDur || missing > 0n;
+  $("create").textContent = badDur ? "Süre 10 dakika – 365 gün arasında olmalı" : missing > 0n ? `Yetersiz bakiye · ${fmtA(missing, a)} ${a.symbol} eksik` : "Kasa oluştur";
 }
 $("asset").onchange = renderTiers;
 $("open").onchange = renderSummary;
 $("create").onclick = async () => {
-  const a = currentAsset(), t = Number(sel("tier")), d = BigInt(sel("dur")), dep = BigInt(a.tiers[t].deposit);
+  const a = currentAsset(), t = Number(sel("tier")), d = BigInt(durSec()), dep = BigInt(a.tiers[t].deposit);
   if (!$("setSkipConfirm").checked && !confirm(`${fmt(dep, a, 6)} ${a.symbol} yatırıp kasa açacaksın. Onaylıyor musun?`)) return;
   $("create").disabled = true;
   try {
@@ -549,7 +718,7 @@ function renderHosted() {
     const action = canSettle
       ? `<button class="btn" type="button" data-settle="${v.id}" style="min-height: 32px; padding: 0 10px">Sonuçlandır</button>`
       : v.settled ? `<a href="/play.html?v=${v.id}">Gör</a>` : `<span class="muted">—</span>`;
-    return `<tr class="click" data-v="${v.id}"><td>#${v.id} <small class="muted">${esc(v.scenario?.name ?? "")}</small></td><td><span class="badge ${v.tier === 2 ? "t2" : ""}">${TIER[v.tier]}</span> <span class="badge">${esc(v.assetSymbol)}</span></td><td class="num ${v.settled ? (v.byTimeout ? "pos" : "neg") : ""}">${v.settled ? (v.byTimeout ? `+${fmtA(v.prize, a)}` : `−${fmtA(v.deposit, a)}`) : fmtA(v.pool, a)} ${esc(v.assetSymbol)}</td><td class="num">${v.attempts}</td><td>${stateText}</td><td>${action}</td></tr>`;
+    return `<tr class="click" data-v="${v.id}"><td>#${v.id} <small class="muted">${esc(v.scenario?.name ?? "")}</small></td><td><span class="badge ${tcls(v.tier)}">${TIER[v.tier]}</span> <span class="badge">${esc(v.assetSymbol)}</span></td><td class="num ${v.settled ? (v.byTimeout ? "pos" : "neg") : ""}">${v.settled ? (v.byTimeout ? `+${fmtA(v.prize, a)}` : `−${fmtA(v.deposit, a)}`) : fmtA(v.pool, a)} ${esc(v.assetSymbol)}</td><td class="num">${v.attempts}</td><td>${stateText}</td><td>${action}</td></tr>`;
   }).join("") || `<tr><td colspan="6" class="muted">${ktab === "history" ? "Henüz sonuçlanan kasan yok." : "Aktif kasan yok."}</td></tr>`;
   for (const tr of document.querySelectorAll("#hostRows tr.click")) tr.onclick = (e) => {
     if (e.target.closest("[data-settle]")) return;
@@ -618,7 +787,33 @@ $("wSend").onclick = async () => {
 };
 
 // --- Profil / rozetler / liderlik / ayarlar ---
+const PROFILE_KEY = "coax-profile";
+const BANNERS = {
+  gold: "linear-gradient(135deg, #3A2A0A, var(--card))",
+  night: "linear-gradient(135deg, #10183A, var(--card))",
+  mint: "linear-gradient(135deg, #0A2E25, var(--card))",
+  fire: "linear-gradient(135deg, #3A1212, var(--card))",
+};
+function readProfile() {
+  let p = {};
+  try { p = JSON.parse(store.get(PROFILE_KEY) || "{}"); } catch {}
+  return { name: p.name || "Oyuncu profili", avatar: p.avatar || "🕵️", banner: p.banner || "gold", visibility: p.visibility || "public" };
+}
+function saveProfile(p) { store.set(PROFILE_KEY, JSON.stringify(p)); renderProfile(); }
+function profileLink() { return `${location.origin}/?p=${linkedWallet || me.address}`; }
 function renderProfile() {
+  const p = readProfile();
+  $("pName").textContent = p.name;
+  $("pAvatar").textContent = p.avatar;
+  $("pVisibility").textContent = { public: "Herkese açık", friends: "Sadece bağlantılar", private: "Gizli" }[p.visibility] ?? "Herkese açık";
+  $("profileCard").style.background = BANNERS[p.banner] ?? BANNERS.gold;
+  $("pAddr").textContent = linkedWallet || me.address;
+  $("pLinked").hidden = !linkedWallet;
+  $("pLinked").textContent = linkedWallet ? `Bağlı: ${short(linkedWallet)}` : "";
+  if (!$("pEdit").hidden) {
+    $("pNameInput").value = p.name; $("pAvatarInput").value = p.avatar;
+    $("pBannerInput").value = p.banner; $("pVisInput").value = p.visibility;
+  }
   if (!accData) return;
   const mine = accData.myAttempts ?? [];
   const crackedList = mine.filter((a) => a.status === "approved");
@@ -644,6 +839,7 @@ function renderProfile() {
   $("pBadges").innerHTML = defs.map((b) => `<div class="badgeCard ${b.on ? "on" : ""}"><span class="ico">${b.ico}</span>${esc(b.name)}</div>`).join("");
   const bestList = [...crackedList].sort((a, b) => (b.time ?? 0) - (a.time ?? 0)).slice(0, 5);
   $("pBestList").innerHTML = bestList.map((a) => `<div class="attItem"><div><a href="/play.html?v=${a.vault}">#${a.vault}</a> · <span class="pos">+${fmt(a.vaultPrize ?? 0, assetOf(a.asset), 4)} ${esc(a.assetSymbol ?? "MON")} havuz</span></div><div>${esc(a.message)}</div>${a.reply ? `<div class="reply">“${esc(a.reply)}”</div>` : ""}</div>`).join("") || `<p class="muted">Henüz onaylanan bir denemen yok. Pratik modda ısın, sonra Zor modda dene.</p>`;
+  $("pActivity").innerHTML = (accData.history ?? []).slice(0, 6).map((h) => `<div><span class="mono">${h.time ? new Date(h.time * 1000).toLocaleDateString("tr-TR") : ""}</span><span>${KIND[h.kind]}</span><span><a href="/play.html?v=${h.vault}">#${h.vault}</a></span><span class="mono ${String(h.amount).startsWith("+") ? "pos" : "neg"}">${esc(h.amount)} ${esc(h.assetSymbol ?? "")}</span></div>`).join("") || `<span class="muted">Henüz aktivite yok.</span>`;
   const unlocked = crackedList.length > 0;
   $("pNftName").textContent = unlocked ? `Coaxer Rozeti #${crackedList.length}` : "Kilitli rozet";
   $("pNftDesc").textContent = unlocked ? `${crackedList.length} kasa kırdın. Bu hatıra rozeti adresine özeldir.` : "İlk kasayı kırınca hatıra rozetin açılır.";
@@ -668,23 +864,125 @@ async function loadLeaderboard() {
 }
 
 const SET_KEY = "coax-settings";
-function readSettings() { try { return JSON.parse(store.get(SET_KEY) || "{}"); } catch { return {}; } }
-function saveSettings() {
-  const s = { skipConfirm: $("setSkipConfirm").checked, activeOnly: $("setActiveOnly").checked, compact: $("setCompact").checked };
-  store.set(SET_KEY, JSON.stringify(s));
-  document.body.classList.toggle("compact", s.compact);
-  if (s.activeOnly) $("fStatus").value = "active";
-  renderExplore();
+const SETTINGS_DEFAULTS = { theme: "dark", lang: "tr", anim: "full", num: "2", sound: false, music: false, haptic: false, motion: false, skipConfirm: false, activeOnly: false, compact: false, email: "", twofa: false, publicStats: true, publicActivity: true, blocked: [], notifications: {} };
+let settings = SETTINGS_DEFAULTS;
+function readSettings() { try { return { ...SETTINGS_DEFAULTS, ...JSON.parse(store.get(SET_KEY) || "{}") }; } catch { return { ...SETTINGS_DEFAULTS }; } }
+let actx, musicNodes = [], toastTimer;
+function beep(freq = 620) {
+  if (!settings.sound) return;
+  try {
+    actx ??= new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.frequency.value = freq; o.type = "sine"; g.gain.value = 0.035;
+    g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + 0.12);
+    o.connect(g).connect(actx.destination); o.start(); o.stop(actx.currentTime + 0.13);
+  } catch {}
 }
-(() => {
-  const s = readSettings();
-  $("setSkipConfirm").checked = !!s.skipConfirm;
-  $("setActiveOnly").checked = !!s.activeOnly;
-  $("setCompact").checked = !!s.compact;
-  document.body.classList.toggle("compact", !!s.compact);
-  if (s.activeOnly) $("fStatus").value = "active";
-})();
-for (const id of ["setSkipConfirm", "setActiveOnly", "setCompact"]) $(id).onchange = saveSettings;
+function haptic(ms = 12) { if (settings.haptic && navigator.vibrate) navigator.vibrate(ms); }
+function applyMusic() {
+  try {
+    if (settings.music && !musicNodes.length) {
+      actx ??= new (window.AudioContext || window.webkitAudioContext)();
+      const g = actx.createGain(); g.gain.value = 0.012; g.connect(actx.destination);
+      for (const f of [110, 164.81, 220]) { const o = actx.createOscillator(); o.type = "sine"; o.frequency.value = f; o.connect(g); o.start(); musicNodes.push(o); }
+      musicNodes.push(g);
+    } else if (!settings.music && musicNodes.length) {
+      for (const n of musicNodes) { try { n.stop?.(); } catch {} }
+      musicNodes = [];
+    }
+  } catch {}
+}
+function applySettings() {
+  const dark = settings.theme === "dark" || (settings.theme === "system" && !matchMedia("(prefers-color-scheme: light)").matches);
+  document.body.classList.toggle("light", !dark);
+  document.body.classList.toggle("compact", !!settings.compact);
+  document.body.classList.toggle("anim-low", settings.anim === "low");
+  document.body.classList.toggle("anim-off", settings.anim === "off");
+  document.body.classList.toggle("reduced-motion", !!settings.motion);
+  numPref = Number(settings.num) || 2;
+  document.documentElement.lang = settings.lang;
+  const NAV = { tr: ["Keşfet", "Kasa aç", "Cüzdan", "Profil"], en: ["Explore", "Open vault", "Wallet", "Profile"] };
+  document.querySelectorAll("nav.tabs button").forEach((b, i) => { b.textContent = (NAV[settings.lang] ?? NAV.tr)[i]; });
+  if (settings.activeOnly) $("fStatus").value = "active";
+  applyMusic();
+}
+function saveSettings() {
+  settings = {
+    ...settings,
+    theme: $("setTheme").value, lang: $("setLang").value, anim: $("setAnim").value, num: $("setNum").value,
+    sound: $("setSound").checked, music: $("setMusic").checked, haptic: $("setHaptic").checked, motion: $("setMotion").checked,
+    skipConfirm: $("setSkipConfirm").checked, activeOnly: $("setActiveOnly").checked, compact: $("setCompact").checked,
+    email: $("setEmail").value.trim(), twofa: $("set2fa").checked, publicStats: $("setPublicStats").checked, publicActivity: $("setPublicActivity").checked,
+  };
+  store.set(SET_KEY, JSON.stringify(settings));
+  applySettings(); renderExplore(); renderProfile();
+}
+function fillSettings() {
+  $("setTheme").value = settings.theme; $("setLang").value = settings.lang; $("setAnim").value = settings.anim; $("setNum").value = settings.num;
+  $("setSound").checked = !!settings.sound; $("setMusic").checked = !!settings.music; $("setHaptic").checked = !!settings.haptic; $("setMotion").checked = !!settings.motion;
+  $("setSkipConfirm").checked = !!settings.skipConfirm; $("setActiveOnly").checked = !!settings.activeOnly; $("setCompact").checked = !!settings.compact;
+  $("setEmail").value = settings.email || ""; $("set2fa").checked = !!settings.twofa; $("setPublicStats").checked = settings.publicStats !== false; $("setPublicActivity").checked = settings.publicActivity !== false;
+  for (const [k, id] of Object.entries({ daily: "notifDaily", mission: "notifMission", rank: "notifRank", friend: "notifFriend", event: "notifEvent", reward: "notifReward" })) $(id).checked = !!settings.notifications?.[k];
+  renderBlocked(); renderSessions(); renderLinkedSettings();
+}
+function saveNotifs() {
+  settings.notifications = Object.fromEntries([["daily", "notifDaily"], ["mission", "notifMission"], ["rank", "notifRank"], ["friend", "notifFriend"], ["event", "notifEvent"], ["reward", "notifReward"]].map(([k, id]) => [k, $(id).checked]));
+  store.set(SET_KEY, JSON.stringify(settings));
+}
+function renderSessions() {
+  $("setSessions").innerHTML = `<div class="attItem" style="margin:0"><b>Bu cihaz</b> · aktif<br><small class="muted">${esc(navigator.userAgent.slice(0, 110))}</small></div>`;
+}
+function renderLinkedSettings() { $("setLinked").textContent = linkedWallet || "—"; }
+function renderBlocked() {
+  const list = settings.blocked ?? [];
+  $("setBlockedList").innerHTML = list.length ? list.map((a) => `<div style="display:flex;gap:8px;align-items:center;justify-content:space-between"><span class="mono">${esc(short(a))}</span><button class="btn" style="min-height:28px" data-unblock="${esc(a)}">Kaldır</button></div>`).join("") : "Engellenen kullanıcı yok.";
+  for (const b of $("setBlockedList").querySelectorAll("[data-unblock]")) b.onclick = () => {
+    settings.blocked = (settings.blocked ?? []).filter((x) => x !== b.dataset.unblock);
+    store.set(SET_KEY, JSON.stringify(settings)); renderBlocked();
+  };
+}
+settings = readSettings(); fillSettings(); applySettings();
+for (const id of ["setTheme", "setLang", "setAnim", "setNum", "setSound", "setMusic", "setHaptic", "setMotion", "setSkipConfirm", "setActiveOnly", "setCompact", "setEmail", "set2fa", "setPublicStats", "setPublicActivity"]) $(id).onchange = saveSettings;
+for (const id of ["notifDaily", "notifMission", "notifRank", "notifFriend", "notifEvent", "notifReward"]) $(id).onchange = saveNotifs;
+$("notifPermission").onclick = async () => {
+  if (!("Notification" in window)) return toast("Bu tarayıcı bildirimleri desteklemiyor.");
+  const r = await Notification.requestPermission();
+  toast(r === "granted" ? "Bildirim izni verildi." : "Bildirim izni verilmedi.");
+};
+$("setBlockAdd").onclick = () => {
+  const a = $("setBlockAddr").value.trim();
+  if (!isAddress(a)) return toast("Geçerli bir adres yaz.");
+  settings.blocked = [...new Set([...(settings.blocked ?? []), getAddress(a)])];
+  store.set(SET_KEY, JSON.stringify(settings)); $("setBlockAddr").value = ""; renderBlocked();
+};
+$("setDataExport").onclick = () => {
+  const data = { exportedAt: new Date().toISOString(), profile: readProfile(), settings, linkedWallet, wallet: me.address };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+  const a = document.createElement("a"); a.href = url; a.download = "coaxer-verilerim.json"; a.click(); URL.revokeObjectURL(url);
+  toast("Verilerin indirildi.");
+};
+$("setDeleteAccount").onclick = () => {
+  if (!confirm("Profil, ayarlar ve bağlı cüzdan bilgileri silinecek. Devam?")) return;
+  if (!confirm("Otomatik cüzdan anahtarın silinmeyecek; sadece hesap verilerin temizlenecek. Onaylıyor musun?")) return;
+  try { for (const k of [SET_KEY, PROFILE_KEY, "coax-linked-wallet"]) localStorage.removeItem(k); } catch {}
+  location.reload();
+};
+$("pEditToggle").onclick = () => {
+  $("pEdit").hidden = !$("pEdit").hidden;
+  if (!$("pEdit").hidden) { const p = readProfile(); $("pNameInput").value = p.name; $("pAvatarInput").value = p.avatar; $("pBannerInput").value = p.banner; $("pVisInput").value = p.visibility; }
+};
+$("pSave").onclick = () => {
+  saveProfile({ name: ($("pNameInput").value.trim() || "Oyuncu profili").slice(0, 24), avatar: $("pAvatarInput").value, banner: $("pBannerInput").value, visibility: $("pVisInput").value });
+  $("pSaveMsg").textContent = "Profil kaydedildi.";
+  toast("Profil güncellendi.");
+};
+$("pCopyLink").onclick = () => copy(profileLink(), "Profil linki kopyalandı.");
+$("pShare").onclick = async () => {
+  const url = profileLink();
+  if (navigator.share) { try { await navigator.share({ title: readProfile().name, url }); return; } catch {} }
+  copy(url, "Profil linki kopyalandı.");
+};
+$("setLinked").onclick = () => { $("linkAddr").value = linkedWallet || ""; go("wallet"); };
 $("setResetScope").onclick = () => {
   $("fTier").value = ""; $("fStatus").value = "active"; $("fSort").value = "pool"; $("hFilter").value = "";
   saveSettings(); refreshAccount(); toast("Filtreler sıfırlandı.");
@@ -694,6 +992,47 @@ $("setResetWallet").onclick = () => {
   if (!confirm("Son kez: anahtarını yedekledin mi?")) return;
   try { localStorage.removeItem("kasa-burner"); localStorage.removeItem("kasa-mode"); } catch {}
   location.reload();
+};
+function openModal(html) {
+  const back = document.createElement("div"); back.className = "modalBack";
+  back.innerHTML = `<div class="card"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><b>Coaxer</b><button class="btn" type="button" data-close style="min-height:32px">Kapat</button></div>${html}</div>`;
+  back.onclick = (e) => { if (e.target === back || e.target.closest("[data-close]")) back.remove(); };
+  document.body.appendChild(back);
+  return back;
+}
+$("helpTerms").onclick = () => openModal(`<h2 style="margin-top:8px">Kullanım şartları</h2><p class="muted">Coaxer yalnızca Monad Testnet üzerinde çalışır. Testnet varlıklarının parasal değeri yoktur. Zincire yazılan mesajlar herkese açıktır; kişisel bilgi paylaşmayın. Kasa kuralları ve platform payı arayüzde gösterilir.</p>`);
+$("helpPrivacy").onclick = () => openModal(`<h2 style="margin-top:8px">Gizlilik politikası</h2><p class="muted">Profil ve ayarların bu tarayıcıda (localStorage) saklanır. Cüzdan adresin ve zincir işlemlerin herkese açıktır. Verilerini istediğin zaman "Verilerimi indir" ile dışa aktarabilir veya hesabını silebilirsin.</p>`);
+$("helpTutorial").onclick = () => {
+  const steps = [
+    ["Keşfet", "Aktif kasaları ve ödül havuzlarını burada görürsün."],
+    ["Kasa aç", "Para birimini, 1–5 arası zorluk seviyesini, süreyi ve bekçi kişiliğini seç."],
+    ["Oyna", "Kasayı açmak için Yakışıklı Güvenlik'i ikna etmeye çalış; pratik modu ücretsizdir."],
+    ["Cüzdan", "Kendi cüzdanını bağla, bakiyeni ve işlemlerini yönet."],
+  ];
+  let i = 0;
+  const back = openModal(`<div id="tutBody"></div><div style="display:flex;justify-content:space-between;margin-top:12px"><span class="muted" id="tutStep"></span><button class="btn primary" data-next type="button">İleri</button></div>`);
+  const draw = () => {
+    back.querySelector("#tutBody").innerHTML = `<h2 style="margin-top:8px">${steps[i][0]}</h2><p class="muted">${steps[i][1]}</p>`;
+    back.querySelector("#tutStep").textContent = `${i + 1}/${steps.length}`;
+    back.querySelector("[data-next]").textContent = i === steps.length - 1 ? "Bitir" : "İleri";
+  };
+  back.querySelector("[data-next]").onclick = () => { if (i === steps.length - 1) return back.remove(); i++; draw(); };
+  draw();
+};
+$("helpBugSend").onclick = () => {
+  const text = $("helpBug").value.trim();
+  const shot = $("helpBugShot").files?.[0]?.name;
+  if (!text) return toast("Önce hatayı kısaca yaz.");
+  const body = `Hata: ${text}\nEkran görüntüsü: ${shot || "yok"}\nCüzdan: ${me.address}\nSürüm: 2.0.0`;
+  location.href = `mailto:craftfec@gmail.com?subject=${encodeURIComponent("Coaxer hata bildirimi")}&body=${encodeURIComponent(body)}`;
+  toast("E-posta uygulaması açılıyor. Ekran görüntüsünü elle ekleyebilirsin.");
+};
+$("helpContact").onclick = () => { location.href = "mailto:craftfec@gmail.com?subject=Coaxer%20destek"; };
+$("helpReportSend").onclick = () => {
+  const a = $("helpReportAddr").value.trim();
+  const why = $("helpReportReason").value.trim();
+  if (!isAddress(a) || !why) return toast("Geçerli adres ve sebep yaz.");
+  location.href = `mailto:craftfec@gmail.com?subject=${encodeURIComponent("Coaxer oyuncu bildirimi")}&body=${encodeURIComponent(`Oyuncu: ${a}\nSebep: ${why}\nBildiren: ${me.address}`)}`;
 };
 
 // --- başlangıç ---

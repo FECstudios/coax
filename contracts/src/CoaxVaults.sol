@@ -31,8 +31,8 @@ contract CoaxVaults {
     uint16 public constant PLATFORM_FEE_BPS = 500; // %5
     uint256 public constant MAX_MESSAGE = 500;
     uint64 public constant SETTLE_GRACE = 60; // süre dolunca 60 sn sadece agent: bekleyen yargılar önce
-    uint64 public constant MIN_DURATION = 60;
-    uint64 public constant MAX_DURATION = 7 days;
+    uint64 public constant MIN_DURATION = 10 minutes;
+    uint64 public constant MAX_DURATION = 365 days;
 
     address public immutable agent; // verdict + prompt şablonları
     mapping(address => uint256) public platformFees; // varlık başına biriken platform payı
@@ -62,13 +62,16 @@ contract CoaxVaults {
     /// @param flatDeposits varlık sırasıyla [tier1, tier2, tier1, tier2, ...]
     /// @param flatFees     varlık sırasıyla [tier1, tier2, tier1, tier2, ...]
     constructor(address _agent, address[] memory assets, uint256[] memory flatDeposits, uint256[] memory flatFees, bytes32[] memory prompts) {
-        require(flatDeposits.length == assets.length * 2 && flatFees.length == assets.length * 2, "config");
+        require(assets.length > 0 && flatDeposits.length == flatFees.length, "config");
+        require(flatDeposits.length % assets.length == 0, "config");
+        uint256 levels = flatDeposits.length / assets.length;
+        require(levels >= 1 && levels <= 255, "config");
         agent = _agent;
         for (uint256 i; i < assets.length; i++) {
             _setAsset(assets[i], true);
-            for (uint8 t = 1; t <= 2; t++) {
-                uint256 k = i * 2 + (t - 1);
-                _setTier(assets[i], t, flatDeposits[k], flatFees[k]);
+            for (uint256 t = 1; t <= levels; t++) {
+                uint256 k = i * levels + (t - 1);
+                _setTier(assets[i], uint8(t), flatDeposits[k], flatFees[k]);
             }
         }
         for (uint256 i; i < prompts.length; i++) allowedPrompt[prompts[i]] = true;
@@ -83,7 +86,7 @@ contract CoaxVaults {
     }
 
     function setTier(address asset, uint8 tier, uint256 deposit, uint256 fee) external onlyAgent {
-        require(tier == 1 || tier == 2, "seviye yok");
+        require(tier > 0, "seviye yok");
         _setTier(asset, tier, deposit, fee);
     }
 

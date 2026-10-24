@@ -13,7 +13,7 @@ Built in one day at **Monad Blitz Ankara v4** · runs on **Monad Testnet**.
 
 ## How it works
 
-1. Anyone opens a vault with a deposit and picks the guard's personality.
+1. Anyone opens a vault with a deposit, picks one of 5 difficulty levels and a duration between 10 minutes and 1 year, then chooses the guard's personality.
 2. Players pay a small fee per message; the fee grows the pool (5% goes to the platform).
 3. A weak, randomly picked LLM plays the guard. A separate judge model (jev) decides whether the reply really opened the vault.
 4. If it did, the contract pays the pool to the player instantly. If time runs out, the pool goes back to the host.

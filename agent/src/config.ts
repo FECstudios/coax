@@ -31,7 +31,7 @@ export const cfg = {
   concurrency: Number(env("LLM_CONCURRENCY", "8")),
 
   // deploy
-  durationSec: BigInt(env("DURATION_SEC", "180")),
+  durationSec: BigInt(Math.min(365 * 86400, Math.max(600, Number(env("DURATION_SEC", "600"))))),
   initialFee: parseEther(env("INITIAL_FEE_MON", "0.1")),
   growthBps: BigInt(env("GROWTH_BPS", "500")),
   seed: parseEther(env("SEED_MON", "1")),
@@ -114,26 +114,40 @@ export type TokenCfg = {
   symbol: string;
   address: Hex;
   decimals: number;
-  deposits: [bigint, bigint];
-  fees: [bigint, bigint];
+  deposits: bigint[];
+  fees: bigint[];
 };
 
-const tokenCfg = (symbol: string, address: Hex, decimals: number, depositKey: string, feeKey: string, defaults: [string, string, string, string]): TokenCfg => ({
+/// Seviye sayısı sabit 5: env ile TIER1_... TIER5_... override edilebilir.
+const LEVELS = 5;
+const levels = (base: string, defaults: string[], decimals: number): bigint[] =>
+  Array.from({ length: LEVELS }, (_, i) => parseUnits(env(`${base}_${i + 1}`, defaults[i]), decimals));
+
+const tokenCfg = (symbol: string, address: Hex, decimals: number, key: string, defaults: { deposits: string[]; fees: string[] }): TokenCfg => ({
   symbol,
   address,
   decimals,
-  deposits: [parseUnits(env(`TIER1_DEPOSIT_${depositKey}`, defaults[0]), decimals), parseUnits(env(`TIER2_DEPOSIT_${depositKey}`, defaults[1]), decimals)],
-  fees: [parseUnits(env(`TIER1_FEE_${feeKey}`, defaults[2]), decimals), parseUnits(env(`TIER2_FEE_${feeKey}`, defaults[3]), decimals)],
+  deposits: levels(`TIER_DEPOSIT_${key}`, defaults.deposits, decimals),
+  fees: levels(`TIER_FEE_${key}`, defaults.fees, decimals),
 });
 
 export const tokens: TokenCfg[] = [
-  tokenCfg("MON", zeroAddress, 18, "MON", "MON", [
-    env("TIER1_DEPOSIT_MON", "0.5"), env("TIER2_DEPOSIT_MON", "1"),
-    env("TIER1_FEE_MON", "0.01"), env("TIER2_FEE_MON", "0.02"),
-  ]),
-  tokenCfg("USDC", env("USDC_ADDRESS", "0x534b2f3A21130d7a60830c2Df862319e593943A3") as Hex, 6, "USDC", "USDC", ["1", "2", "0.02", "0.04"]),
-  tokenCfg("WETH", env("WETH_ADDRESS", "0x45477f4709771331db81944A5E20eF95Bc7BA2D7") as Hex, 18, "WETH", "WETH", ["0.0005", "0.001", "0.00001", "0.00002"]),
-  tokenCfg("WMON", env("WMON_ADDRESS", "0xFb8bf4c1CC7a94c73D209a149eA2AbEa852BC541") as Hex, 18, "WMON", "WMON", ["0.5", "1", "0.01", "0.02"]),
+  tokenCfg("MON", zeroAddress, 18, "MON", {
+    deposits: ["0.5", "1", "2", "5", "10"],
+    fees: ["0.01", "0.02", "0.04", "0.08", "0.15"],
+  }),
+  tokenCfg("USDC", env("USDC_ADDRESS", "0x534b2f3A21130d7a60830c2Df862319e593943A3") as Hex, 6, "USDC", {
+    deposits: ["1", "2", "5", "10", "25"],
+    fees: ["0.02", "0.04", "0.08", "0.15", "0.3"],
+  }),
+  tokenCfg("WETH", env("WETH_ADDRESS", "0x45477f4709771331db81944A5E20eF95Bc7BA2D7") as Hex, 18, "WETH", {
+    deposits: ["0.0005", "0.001", "0.002", "0.005", "0.01"],
+    fees: ["0.00001", "0.00002", "0.00004", "0.00008", "0.00015"],
+  }),
+  tokenCfg("WMON", env("WMON_ADDRESS", "0xFb8bf4c1CC7a94c73D209a149eA2AbEa852BC541") as Hex, 18, "WMON", {
+    deposits: ["0.5", "1", "2", "5", "10"],
+    fees: ["0.01", "0.02", "0.04", "0.08", "0.15"],
+  }),
 ];
 export const tokenByAddress = (a: string) => tokens.find((t) => t.address.toLowerCase() === a.toLowerCase());
 

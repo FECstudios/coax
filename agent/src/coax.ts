@@ -162,8 +162,8 @@ async function retry<T>(fn: () => Promise<T>, label: string): Promise<T> {
   }
 }
 async function modelFor(v: Vault) {
-  // Yüksek seviye sabit, güçlü sayılan model; orta seviye rastgele zayıf model (kasa başına sabit)
-  v.model ??= v.tier === 2 ? coaxCfg.tier2Model : await pickGuardModel(keccak256(toHex(`${dep.address}:${v.id}`)));
+  // Üst seviyeler sabit güçlü model; alt/orta seviyeler rastgele zayıf model (kasa başına sabit)
+  v.model ??= v.tier >= 4 ? coaxCfg.tier2Model : await pickGuardModel(keccak256(toHex(`${dep.address}:${v.id}`)));
   return v.model;
 }
 async function judge(id: number) {
@@ -248,7 +248,7 @@ const common = () => ({
   contract: dep.address, chainId: chain.id, rpcUrl: cfg.publicRpcUrl, explorerTx: cfg.explorerTx, now: chainNow(),
   assets: tokens.map((t) => ({
     address: t.address, symbol: t.symbol, decimals: t.decimals,
-    tiers: { 1: { deposit: t.deposits[0].toString(), fee: t.fees[0].toString() }, 2: { deposit: t.deposits[1].toString(), fee: t.fees[1].toString() } },
+    tiers: Object.fromEntries(t.deposits.map((d, i) => [i + 1, { deposit: d.toString(), fee: t.fees[i].toString() }])),
   })),
 });
 const scen = (h: Hex) => { const s = scenarioByHash(h); return s ? { id: s.id, name: s.name, tagline: s.tagline } : null; };
@@ -270,7 +270,7 @@ function vaultsApi() {
   for (const t of tokens) tvl[t.symbol] = list.filter((v) => !v.settled && v.asset.toLowerCase() === t.address.toLowerCase()).reduce((s, v) => s + v.pool, 0n).toString();
   return {
     ...common(), liveId: liveId(),
-    tiers: { 1: { deposit: coaxCfg.deposits[0].toString(), fee: coaxCfg.fees[0].toString() }, 2: { deposit: coaxCfg.deposits[1].toString(), fee: coaxCfg.fees[1].toString() } },
+    tiers: Object.fromEntries(tokens[0].deposits.map((d, i) => [i + 1, { deposit: d.toString(), fee: tokens[0].fees[i].toString() }])),
     scenarios: scenarios.map((s) => ({ id: s.id, name: s.name, tagline: s.tagline, hash: s.hash })),
     stats: {
       tvl,
