@@ -54,6 +54,9 @@ agent/       Tek Node süreci: zincir izleyici + AI yargıç + tx kuyruğu + HTT
   src/index.ts   ana döngü
   src/ai.ts      bekçi LLM + jev yargıç + model seçimi
   public/        index.html (oyuncu, telefon), screen.html (projeksiyon) — framework yok, viem esm.sh'den
+                 bekci.js: maskotun 5 ruh hali (SVG). Elle düzenleme: tasarım tuvalindeki Bekci.dc.html'den üretilir
+                 (https://claude.ai/artifact/Tm9nX4EFxX8GUgpHbRezDy). screen.html 1920x1080 tasarlanır, ekrana ölçeklenir;
+                 cevapları sırayla harf harf oynatır (WebAudio mırıltı, "Sesi aç" tıklaması gerekir), kalabalıkta hızlanır.
 ```
 
 ### Akış
@@ -86,6 +89,14 @@ Base `https://ai.hackclub.com/proxy/v1` (OpenAI uyumlu `/chat/completions`, `/mo
 - Yerel saat güvenilmez (bu laptop zincirden 3 saat ileri): her zaman hesabı `chainNow()` / `/api/state.now` ile.
 - Verdict süre bittikten sonra da gönderilebilir (süre içindeki denemeler için); `attempt` gönderilemez.
 - Kontrat event'i dış çağrıdan önce emit eder (`_pay`); `apply()` aynı tx'te Verdict → Cracked sırasını varsayar.
+
+## Hosting: Hack Club Nest
+
+- Canlı agent `ssh kuzey@hackclub.app` (Debian 13, root) üzerinde systemd servisi `kasa.service`: `/root/kasa/agent`, `node src/index.ts`, port 3000. Node 26.12.0 nodejs.org binary'si `/usr/local` altında (Debian'ın Node'u eski; `libatomic1` gerekli).
+- Domain: Nest dashboard → Domains sekmesi, alt alan adı → hedef port 3000. HTTPS'i Nest'in reverse proxy'si veriyor. QR için sunucudaki `.env`'de `PUBLIC_URL`.
+- Kod/sayfa güncellemesi: `agent/scripts/push-nest.sh` (sunucunun `.env` ve `deployment.json`'unu ezmez, servisi yeniden başlatır).
+- Log: `ssh kuzey@hackclub.app journalctl -u kasa -f`. Durdur/başlat: `systemctl stop|start kasa`.
+- **Aynı anda tek agent:** Nest'teki çalışırken laptop'ta `npm start` yapma (aynı cüzdan → nonce çakışması, çift verdict/musluk).
 
 ## Monad Testnet
 
