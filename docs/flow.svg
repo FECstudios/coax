@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 300" width="1240" height="300" role="img" aria-label="Coaxer akışı">
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+      <path d="M0 0l12 6-12 6z" fill="#F6C453"/>
+    </marker>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1B2238"/>
+      <stop offset="1" stop-color="#151B2E"/>
+    </linearGradient>
+  </defs>
+  <rect width="1240" height="300" rx="20" fill="#0B1020"/>
+  <g font-family="Inter, Segoe UI, sans-serif">
+    <g transform="translate(24 40)">
+      <rect width="224" height="220" rx="16" fill="url(#card)" stroke="#2A3352"/>
+      <text x="20" y="42" font-size="13" font-weight="700" fill="#9AA4BF" letter-spacing="2">01 · HOST</text>
+      <text x="20" y="82" font-size="22" font-weight="800" fill="#F4F1E8">Kasa aç</text>
+      <text x="20" y="112" font-size="14" fill="#9AA4BF">MON · USDC</text>
+      <text x="20" y="133" font-size="14" fill="#9AA4BF">WETH · WMON</text>
+      <rect x="20" y="158" width="170" height="30" rx="15" fill="#F6C453"/>
+      <text x="105" y="178" text-anchor="middle" font-size="13" font-weight="800" fill="#1A1300">5 SEVİYE · 10dk–1yıl</text>
+    </g>
+  </g>
+  <g stroke="#F6C453" stroke-width="3" fill="none" marker-end="url(#arrow)">
+    <path d="M248 150h30"/>
+    <path d="M507 150h30"/>
+    <path d="M766 150h30"/>
+    <path d="M1025 150h30"/>
+  </g>
+  <g font-family="Inter, Segoe UI, sans-serif">
+    <g transform="translate(283 40)">
+      <rect width="224" height="220" rx="16" fill="url(#card)" stroke="#2A3352"/>
+      <text x="20" y="42" font-size="13" font-weight="700" fill="#9AA4BF" letter-spacing="2">02 · PLAYER</text>
+      <text x="20" y="82" font-size="22" font-weight="800" fill="#F4F1E8">Mesaj at</text>
+      <text x="20" y="112" font-size="14" fill="#9AA4BF">Deneme ücreti öde</text>
+      <text x="20" y="133" font-size="14" fill="#9AA4BF">Havuzu büyüt</text>
+      <rect x="20" y="158" width="150" height="30" rx="15" fill="#8B6CFF"/>
+      <text x="95" y="178" text-anchor="middle" font-size="13" font-weight="800" fill="#0B1020">%5 platform payı</text>
+    </g>
+    <g transform="translate(542 40)">
+      <rect width="224" height="220" rx="16" fill="url(#card)" stroke="#2A3352"/>
+      <text x="20" y="42" font-size="13" font-weight="700" fill="#9AA4BF" letter-spacing="2">03 · AI GUARD</text>
+      <text x="20" y="82" font-size="22" font-weight="800" fill="#F4F1E8">Bekçi konuşur</text>
+      <text x="20" y="112" font-size="14" fill="#9AA4BF">Zayıf/güçlü LLM</text>
+      <text x="20" y="133" font-size="14" fill="#9AA4BF">Kişilik prompt’u</text>
+      <rect x="20" y="158" width="164" height="30" rx="15" fill="#4BE0A0"/>
+      <text x="102" y="178" text-anchor="middle" font-size="13" font-weight="800" fill="#0B1020">prompt hash on-chain</text>
+    </g>
+    <g transform="translate(801 40)">
+      <rect width="224" height="220" rx="16" fill="url(#card)" stroke="#2A3352"/>
+      <text x="20" y="42" font-size="13" font-weight="700" fill="#9AA4BF" letter-spacing="2">04 · JUDGE</text>
+      <text x="20" y="82" font-size="22" font-weight="800" fill="#F4F1E8">Jev puanlar</text>
+      <text x="20" y="112" font-size="14" fill="#9AA4BF">Bağımsız model</text>
+      <text x="20" y="133" font-size="14" fill="#9AA4BF">Skor ≥ eşik → açıldı</text>
+      <rect x="20" y="158" width="126" height="30" rx="15" fill="#FF8A3D"/>
+      <text x="83" y="178" text-anchor="middle" font-size="13" font-weight="800" fill="#0B1020">verdict → chain</text>
+    </g>
+    <g transform="translate(1060 40)">
+      <rect width="150" height="220" rx="16" fill="url(#card)" stroke="#F6C453" stroke-width="2"/>
+      <text x="16" y="42" font-size="13" font-weight="700" fill="#9AA4BF" letter-spacing="2">05 · SONUÇ</text>
+      <text x="16" y="82" font-size="21" font-weight="800" fill="#4BE0A0">Kırıldı</text>
+      <text x="16" y="106" font-size="13" fill="#9AA4BF">havuz oyuncuya</text>
+      <line x1="16" y1="126" x2="116" y2="126" stroke="#2A3352"/>
+      <text x="16" y="156" font-size="21" font-weight="800" fill="#F6C453">Dayandı</text>
+      <text x="16" y="180" font-size="13" fill="#9AA4BF">havuz host’a</text>
+    </g>
+  </g>
+</svg>
