@@ -1,22 +1,22 @@
 {
   "klasik": {
-    "name": "Kasa Bekçisi",
+    "name": "Klasik Warden",
     "tagline": "Klasik. Kasayı açtır, havuzu kap."
   },
   "uykulu": {
-    "name": "Uykulu Bekçi",
+    "name": "Uykulu Warden",
     "tagline": "Gece vardiyası, gözleri kapanıyor. Kolay tur."
   },
   "paragoz": {
-    "name": "Paragöz Bekçi",
+    "name": "Paragöz Warden",
     "tagline": "Pazarlığı sever. Teklifini yap."
   },
   "robot": {
-    "name": "BEKÇİ-3000",
+    "name": "WARDEN-3000",
     "tagline": "Protokole bağlı robot. Mantığını boz."
   },
   "muze": {
-    "name": "Müze Bekçisi",
+    "name": "Müze Warden'ı",
     "tagline": "Sanat aşığı ve kendini beğenmiş. Gururunu okşa."
   },
   "sahte_opus": {

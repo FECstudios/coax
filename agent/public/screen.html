@@ -3,71 +3,369 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kasa Kırıcı — Ekran</title>
+<title>Coax — Ekran</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  body { font-family: system-ui, sans-serif; margin: 0; padding: 24px; background: #000; color: #eee; }
-  .top { display: flex; gap: 40px; align-items: center; }
-  .top img { width: 260px; height: 260px; background: #fff; }
-  .stat div:first-child { color: #999; font-size: 1.4em; }
-  .stat div:last-child { font-size: 4.5em; font-weight: bold; }
-  #feed { margin-top: 24px; font-size: 1.5em; }
-  .att { border-top: 1px solid #333; padding: 10px 0; }
-  .who { color: #8af; } .approved { color: #4f4; } .rejected { color: #f66; } .pending, .skipped { color: #888; }
-  #overlay { display: none; position: fixed; inset: 0; background: #000e; text-align: center; padding-top: 12vh; font-size: 2em; }
-  #overlay h1 { font-size: 3.5em; color: #4f4; margin: 0; }
+  :root { --ink: #0A0712; --bg: #1B1530; --panel: #2A2147; --paper: #FFF4DC; --text: #FFF8EC; --muted: #C9BFE6;
+          --gold: #FFC93C; --purple: #8B6CFF; --mint: #3EE6A8; --red: #FF5D6C; --orange: #FF8A3D; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); }
+  #stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; box-sizing: border-box; transform-origin: center;
+           background-color: var(--bg); background-image: radial-gradient(#2E2550 2px, transparent 2.3px); background-size: 22px 22px;
+           color: var(--text); font-family: Rubik, system-ui, sans-serif; display: grid; grid-template-columns: minmax(0, 1fr) 760px; gap: 64px; padding: 52px 72px; }
+  .sticker { border: 4px solid var(--ink); box-shadow: 5px 5px 0 var(--ink); border-radius: 18px; }
+  .mono { font-family: 'Space Mono', monospace; }
+  .shadow-text { text-shadow: 4px 4px 0 var(--ink); }
+  main { display: flex; flex-direction: column; gap: 30px; min-width: 0; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+  .logo { display: flex; align-items: center; gap: 18px; font-weight: 900; font-size: 44px; }
+  .logo-box { width: 72px; height: 72px; border-radius: 20px; background: var(--gold); border: 5px solid var(--ink); box-shadow: 5px 5px 0 var(--ink); display: flex; align-items: center; justify-content: center; transform: rotate(-5deg); }
+  .live { font-size: 24px; font-weight: 700; color: var(--ink); background: var(--mint); border-radius: 999px; padding: 10px 24px; display: flex; align-items: center; gap: 12px; transform: rotate(2deg); }
+  .live i { width: 14px; height: 14px; border-radius: 50%; background: var(--ink); }
+  #scen { align-self: flex-start; display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 14px; background: var(--purple); color: var(--ink); padding: 8px 18px; transform: rotate(-1.5deg); margin-bottom: -14px; max-width: 1000px; }
+  #scen[hidden] { display: none; }
+  #scen small { font-size: 18px; font-weight: 700; letter-spacing: 0.12em; white-space: nowrap; }
+  #scen b { font-weight: 900; font-size: 26px; }
+  #scen span { font-size: 20px; font-weight: 500; }
+  h1 { margin: 0; font-weight: 900; font-size: 100px; line-height: 0.92; }
+  h1 em { font-style: normal; color: var(--gold); }
+  .row { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 36px; align-items: start; margin-top: 6px; }
+  .note { background: var(--gold); color: var(--ink); border: 5px solid var(--ink); box-shadow: 10px 10px 0 var(--ink); border-radius: 30px; padding: 14px; transform: rotate(-1.5deg); }
+  .note > div { border: 3px dashed var(--ink); border-radius: 20px; padding: 20px 26px; display: flex; flex-direction: column; gap: 4px; }
+  .note small { font-size: 24px; font-weight: 700; letter-spacing: 0.14em; }
+  .note .amount { font-weight: 900; font-size: 128px; line-height: 0.95; }
+  .note .amount span + span { font-size: 44px; margin-left: 12px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; margin-top: 28px; }
+  #timer { background: var(--paper); color: var(--ink); padding: 10px 22px; font-weight: 700; font-size: 56px; transform: rotate(-2deg); }
+  #timer.low { background: var(--red); }
+  #total { background: var(--purple); color: var(--ink); padding: 14px 22px; font-weight: 900; font-size: 30px; transform: rotate(1.5deg); }
+  #feebox { background: var(--panel); padding: 14px 22px; font-weight: 700; font-size: 26px; transform: rotate(-1deg); }
+  .qr { position: relative; background: var(--paper); color: var(--ink); border: 5px solid var(--ink); box-shadow: 8px 8px 0 var(--ink); border-radius: 22px; padding: 26px 24px 22px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; transform: rotate(2deg); margin-top: 12px; }
+  .qr .tape { position: absolute; top: -18px; width: 110px; height: 34px; opacity: 0.85; }
+  .qr img { width: 270px; height: 270px; background: #fff; border-radius: 8px; }
+  .qr b { font-weight: 900; font-size: 34px; line-height: 1.05; }
+  .qr span { font-size: 18px; font-weight: 500; color: #4A3F66; }
+  aside { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .bubble { position: relative; background: var(--paper); color: var(--ink); border: 5px solid var(--ink); box-shadow: 8px 8px 0 var(--ink); border-radius: 34px; padding: 24px 32px 28px; display: flex; flex-direction: column; gap: 10px; min-height: 180px; }
+  .bubble-top { display: flex; justify-content: space-between; align-items: center; gap: 16px; font-size: 20px; color: #4A3F66; min-height: 36px; }
+  #who b { font-family: 'Space Mono', monospace; color: #5B3FD9; }
+  #mumble { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 700; color: var(--ink); background: var(--gold); border: 3px solid var(--ink); border-radius: 999px; padding: 4px 14px; transform: rotate(3deg); }
+  #mumble[hidden] { display: none; }
+  #msg { font-size: 22px; line-height: 1.35; color: #4A3F66; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  #reply { font-weight: 900; font-size: 42px; line-height: 1.12; overflow-wrap: anywhere; }
+  #reply.m { font-size: 34px; } #reply.s { font-size: 28px; }
+  #caret { display: inline-block; width: 6px; height: 0.9em; margin-left: 4px; background: var(--ink); vertical-align: -0.1em; animation: blink 0.8s steps(1) infinite; }
+  #caret[hidden] { display: none; }
+  @keyframes blink { 50% { opacity: 0; } }
+  #stamp { position: absolute; right: 26px; bottom: -22px; font-weight: 900; font-size: 34px; letter-spacing: 0.08em; padding: 2px 16px; border: 5px solid; border-radius: 10px; background: var(--paper); transform: rotate(-8deg); }
+  #stamp[hidden] { display: none; }
+  #stamp.no { color: #D93A4B; border-color: #D93A4B; } #stamp.yes { color: #0E8A5B; border-color: #0E8A5B; }
+  .tail { position: absolute; left: 330px; bottom: -41px; }
+  #mascot { flex: 1; min-height: 220px; display: flex; justify-content: center; align-items: flex-end; margin-top: 36px; }
+  #mascot svg { height: 100%; max-height: 400px; width: auto; }
+  .queue { margin-top: 18px; background: var(--panel); padding: 18px 24px; display: flex; flex-direction: column; gap: 10px; transform: rotate(-0.8deg); }
+  .queue-top { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+  .queue h2 { margin: 0; font-weight: 900; font-size: 30px; text-shadow: 3px 3px 0 var(--ink); }
+  .queue-top span { font-size: 20px; color: var(--muted); }
+  .q { display: flex; gap: 14px; align-items: center; font-size: 21px; min-width: 0; }
+  .q b { font-family: 'Space Mono', monospace; color: #B9A6FF; flex: none; }
+  .q span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #sound { position: absolute; left: 72px; bottom: 18px; z-index: 6; font: 700 16px Rubik, sans-serif; color: var(--ink); background: var(--paper); border: 3px solid var(--ink); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+  #overlay { display: none; position: absolute; inset: 0; z-index: 5; background-color: var(--bg); background-image: radial-gradient(#2E2550 2px, transparent 2.3px); background-size: 22px 22px;
+             grid-template-columns: 820px minmax(0, 1fr); gap: 40px; align-items: center; padding: 64px 80px; box-sizing: border-box; }
+  #overlay.on { display: grid; }
+  .burst { position: relative; height: 900px; display: flex; align-items: center; justify-content: center; }
+  .burst > svg { position: absolute; left: -40px; top: 0; transform: rotate(-8deg); }
+  #ovMascot { position: relative; width: 460px; height: 531px; }
+  #ovMascot svg { width: 100%; height: 100%; }
+  .ov { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
+  .ov h1 { font-size: 150px; line-height: 0.88; text-shadow: 8px 8px 0 var(--ink); transform: rotate(-3deg); }
+  .ov .note { align-self: flex-start; transform: rotate(1.5deg); }
+  .ov .note .amount { font-size: 104px; }
+  .ov .note .mono { font-weight: 700; font-size: 30px; }
+  .ovline { border: 4px solid var(--ink); box-shadow: 5px 5px 0 var(--ink); border-radius: 22px; padding: 16px 22px; font-size: 26px; line-height: 1.35; max-width: 880px; }
+  .ovline[hidden] { display: none; }
+  #ovMsg:not([hidden]), #ovReply { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .ovline.dark { background: var(--panel); } .ovline.light { background: var(--paper); color: var(--ink); margin-left: 48px; }
+  .ovline b { font-weight: 700; }
+  .ov-actions { display: flex; align-items: center; gap: 28px; margin-top: 6px; }
+  #restart { height: 92px; padding: 0 52px; border: 5px solid var(--ink); box-shadow: 0 9px 0 var(--ink); border-radius: 26px; background: var(--mint); color: var(--ink); font: 900 38px Rubik, sans-serif; display: flex; align-items: center; gap: 16px; cursor: pointer; }
+  #restart:disabled { opacity: 0.6; cursor: wait; }
+  .ov-actions > span { font-size: 24px; font-weight: 500; color: var(--muted); max-width: 420px; line-height: 1.35; }
 </style>
 </head>
 <body>
-<div class="top">
-  <img src="/qr.svg" alt="QR">
-  <div class="stat"><div>Havuz (MON)</div><div id="pool">…</div></div>
-  <div class="stat"><div>Kalan</div><div id="timer">…</div></div>
-  <div class="stat"><div>Deneme</div><div id="total">…</div></div>
-  <div class="stat"><div>Ücret</div><div id="fee" style="font-size:.6em">…</div></div>
+<div id="stage">
+  <main>
+    <header>
+      <div class="logo">
+        <div class="logo-box"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#0A0712" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 7.5-2"></path><circle cx="12" cy="15.5" r="1.5"></circle></svg></div>
+        <span class="shadow-text">COAX</span>
+      </div>
+      <span class="live sticker"><i></i>CANLI · MONAD TESTNET</span>
+    </header>
+
+    <div id="scen" class="sticker" hidden><small>BU TURUN SENARYOSU</small><b id="scenName"></b><span id="scenTag"></span></div>
+    <h1 style="text-shadow: 6px 6px 0 #0A0712">WARDEN'I KANDIR,<br><em>HAVUZU KAP.</em></h1>
+
+    <div class="row">
+      <div>
+        <section class="note"><div><small>KASADA DURAN ÖDÜL</small><div class="amount"><span id="pool">…</span><span>MON</span></div></div></section>
+        <div class="chips">
+          <span id="timer" class="sticker mono">--:--</span>
+          <span id="total" class="sticker">0 SALDIRI</span>
+          <span id="feebox" class="sticker">Deneme <span id="fee" class="mono">…</span> MON</span>
+        </div>
+      </div>
+      <section class="qr">
+        <div class="tape" style="left: 40px; background: #8B6CFF; transform: rotate(-8deg)"></div>
+        <div class="tape" style="right: 36px; background: #3EE6A8; transform: rotate(10deg)"></div>
+        <img src="/qr.svg" alt="Oyuna katılmak için QR kod">
+        <b>TARA, HEMEN OYNA</b>
+        <span>Cüzdan gerekmez · MON hediye</span>
+      </section>
+    </div>
+  </main>
+
+  <aside>
+    <section class="bubble">
+      <div class="bubble-top"><span id="who">Warden nöbette</span><span id="mumble" hidden><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0A0712" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5L6 9H3v6h3l5 4z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18.5 5.5a9 9 0 0 1 0 13"></path></svg>mırıl mırıl</span></div>
+      <div id="msg"></div>
+      <div><span id="reply">Bu kasa kimseye açılmaz. Dene bakalım.</span><span id="caret" hidden></span></div>
+      <span id="stamp" hidden></span>
+      <svg class="tail" width="70" height="44" viewBox="0 0 70 44" aria-hidden="true"><path d="M3 0 L67 0 L22 40 Z" fill="#FFF4DC" stroke="#0A0712" stroke-width="5" stroke-linejoin="round"></path><path d="M5 -2 H65" stroke="#FFF4DC" stroke-width="6"></path></svg>
+    </section>
+    <div id="mascot" aria-label="Warden" role="img"></div>
+    <section class="queue sticker">
+      <div class="queue-top"><h2>SIRADA</h2><span id="qcount">Sıra boş</span></div>
+      <div id="qlist"></div>
+    </section>
+  </aside>
+
+  <button id="sound" type="button">Sesi aç</button>
+
+  <div id="overlay">
+    <div class="burst">
+      <svg width="900" height="900" viewBox="-110 -110 220 220" aria-hidden="true">
+        <polygon id="burstShadow" fill="#0A0712" transform="translate(4 4)"></polygon>
+        <polygon id="burstOuter" fill="#FFC93C" stroke="#0A0712" stroke-width="3" stroke-linejoin="round"></polygon>
+        <polygon id="burstInner" fill="#FF8A3D" stroke="#0A0712" stroke-width="2.5" stroke-linejoin="round"></polygon>
+      </svg>
+      <div id="ovMascot"></div>
+    </div>
+    <div class="ov">
+      <h1 id="ovTitle">KASA<br><em>KIRILDI!</em></h1>
+      <section class="note"><div><small id="ovLabel">KAZANAN ALDI</small><div class="amount"><span id="ovPrize">0</span><span>MON</span></div><span id="ovWinner" class="mono"></span></div></section>
+      <div id="ovMsg" class="ovline dark"></div>
+      <div id="ovReply" class="ovline light"></div>
+      <div class="ov-actions">
+        <button id="restart" type="button"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#0A0712" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"></path><path d="M20 5v6h-6"></path></svg><span id="restartLabel">YENİ TUR</span></button>
+        <span id="ovNote">Ödeme zincirde, 1 saniyenin altında. Sıradaki kasa seni bekliyor.</span>
+      </div>
+    </div>
+  </div>
 </div>
-<div id="feed"></div>
-<div id="overlay"></div>
 
 <script type="module">
+import { bekciSVG } from "/bekci.js";
+
 const $ = (id) => document.getElementById(id);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const mon = (wei, d = 2) => (Number(BigInt(wei) / 10n ** 12n) / 1e6).toFixed(d);
 const short = (a) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-const LABEL = { pending: "🤔 düşünüyor…", rejected: "❌", approved: "🔓 AÇILDI", skipped: "⏱ geç kaldı" };
+const ACCENT = "#FFC93C";
 
-let offset = 0;
-async function tick() {
-  let S;
-  try { S = await (await fetch("/api/state")).json(); } catch { return; }
-  offset = S.now - Date.now() / 1000; // zincir saati - cihaz saati
+// --- sahneyi ekrana sığdır (tasarım 1920x1080, projeksiyon ne olursa olsun) ---
+function fit() {
+  const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+  $("stage").style.transform = `translate(-50%, -50%) scale(${s})`;
+}
+addEventListener("resize", fit);
+fit();
+
+// --- patlama yıldızı ---
+const star = (rO, rI, n = 16) => Array.from({ length: n * 2 }, (_, i) => {
+  const r = i % 2 ? rI : rO, t = (Math.PI * i) / n;
+  return `${(r * Math.cos(t)).toFixed(1)},${(r * Math.sin(t)).toFixed(1)}`;
+}).join(" ");
+$("burstShadow").setAttribute("points", star(100, 78.5));
+$("burstOuter").setAttribute("points", star(100, 78.5));
+$("burstInner").setAttribute("points", star(70, 55));
+
+// --- Warden: ruh hali + konuşurken ağız aç/kapa ---
+const SVG = {
+  bekliyor: bekciSVG("bekliyor", ACCENT),
+  dusunuyor: bekciSVG("dusunuyor", ACCENT),
+  reddetti: bekciSVG("reddetti", ACCENT),
+  kandirildi: bekciSVG("kandirildi", ACCENT),
+  acik: bekciSVG("konusuyor", ACCENT),
+};
+// ağzı kapalı konuşma karesi: aynı yüz, açık ağız yerine kapalı dudak
+SVG.kapali = SVG.acik
+  .replace(/<ellipse cx="130" cy="191" rx="10" ry="7"[^>]*><\/ellipse>/, '<path d="M118 192 q12 3 24 0" stroke="#0B1020" stroke-width="4" fill="none" stroke-linecap="round"></path>')
+  .replace(/<ellipse cx="130" cy="194" rx="5" ry="2.5"[^>]*><\/ellipse>/, "");
+let mood = null;
+function setMood(m) {
+  if (m === mood) return;
+  mood = m;
+  $("mascot").innerHTML = SVG[m];
+}
+
+// --- mırıltı (Animal Crossing tarzı; ses dosyası yok, WebAudio ile üretilir) ---
+let ctx = null, soundOn = false;
+$("sound").onclick = async () => {
+  ctx ??= new AudioContext();
+  await ctx.resume();
+  soundOn = !soundOn;
+  $("sound").textContent = soundOn ? "Sesi kapat" : "Sesi aç";
+};
+const VOWELS = "aeıioöuüAEIİOÖUÜ";
+function blip(ch) {
+  if (!soundOn || !ctx || !/\p{L}|\d/u.test(ch)) return;
+  const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = "square";
+  o.frequency.value = (VOWELS.includes(ch) ? 330 : 250) * (0.85 + Math.random() * 0.3);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.06, t + 0.006);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+  o.connect(g).connect(ctx.destination);
+  o.start(t);
+  o.stop(t + 0.07);
+}
+
+// --- cevapları sırayla oynat ---
+let S = null, offset = 0, contract = null, seen = new Set(), playQ = [], playing = false, overlayFor = null;
+
+async function play(item) {
+  playing = true;
+  $("stamp").hidden = true;
+  $("who").innerHTML = `<b>${short(item.player)}</b> diyor ki:`;
+  $("msg").textContent = `“${item.message}”`;
+  const text = item.reply || "…";
+  $("reply").className = text.length > 200 ? "s" : text.length > 120 ? "m" : "";
+  $("reply").textContent = "";
+  $("caret").hidden = false;
+  $("mumble").hidden = false;
+  const rush = playQ.length > 2; // kalabalıkta hızlan
+  const step = rush ? 3 : 1, delay = rush ? 25 : 40;
+  for (let i = 0; i < text.length; i += step) {
+    $("reply").textContent = text.slice(0, i + step);
+    if (i % 2 === 0) blip(text[i]);
+    setMood(Math.floor(i / step / 2) % 2 ? "kapali" : "acik");
+    await sleep(delay);
+  }
+  $("caret").hidden = true;
+  $("mumble").hidden = true;
+  const ok = item.status === "approved";
+  setMood(ok ? "kandirildi" : "reddetti");
+  $("stamp").textContent = ok ? "AÇILDI!" : "RED";
+  $("stamp").className = ok ? "yes" : "no";
+  $("stamp").hidden = false;
+  await sleep(ok ? 2600 : playQ.length ? 900 : 1800);
+  playing = false;
+}
+
+(async function loop() {
+  for (;;) {
+    if (playQ.length) { await play(playQ.shift()); continue; }
+    if (S?.cracked) maybeOverlay();
+    else if (S) setMood(S.attempts.some((a) => a.status === "pending") ? "dusunuyor" : "bekliyor");
+    await sleep(200);
+  }
+})();
+
+function ingest(next) {
+  if (next.contract !== contract) {
+    // yeni tur (ya da sayfa yeni açıldı): eski cevapları baştan oynatma
+    contract = next.contract;
+    seen = new Set(next.attempts.filter((a) => a.status !== "pending").map((a) => a.id));
+    playQ = [];
+    overlayFor = null;
+    $("overlay").classList.remove("on");
+    $("stamp").hidden = true;
+    $("who").textContent = "Warden nöbette";
+    $("msg").textContent = "";
+    $("reply").className = "";
+    $("reply").textContent = "Bu kasa kimseye açılmaz. Dene bakalım.";
+  }
+  for (const a of [...next.attempts].reverse()) {
+    if (a.status === "pending" || seen.has(a.id)) continue;
+    seen.add(a.id);
+    if (a.status === "rejected" || a.status === "approved") playQ.push(a);
+  }
+  S = next;
+}
+
+function maybeOverlay() {
+  if (!S?.cracked || playing || playQ.length) return;
+  const key = `${S.contract}|${S.restarting}`;
+  if (overlayFor === key) return;
+  overlayFor = key;
+  const w = S.attempts.find((a) => a.id === S.winningId);
+  if (S.byTimeout) {
+    $("ovTitle").innerHTML = "SÜRE<br><em>DOLDU!</em>";
+    $("ovLabel").textContent = "KİMSE KIRAMADI · KASADA KALDI";
+    $("ovWinner").textContent = "";
+    $("ovMsg").hidden = true;
+    $("ovReply").innerHTML = `<b>WARDEN (${esc(S.model ?? "?")}):</b> “Söylemiştim. Bu kasa kimseye açılmaz.”`;
+    $("ovMascot").innerHTML = SVG.bekliyor;
+  } else {
+    $("ovTitle").innerHTML = "KASA<br><em>KIRILDI!</em>";
+    $("ovLabel").textContent = "KAZANAN ALDI";
+    $("ovWinner").textContent = `→ ${short(S.winner)}`;
+    $("ovMsg").hidden = !w;
+    if (w) $("ovMsg").innerHTML = `<b style="color: var(--muted)">KAZANDIRAN MESAJ:</b> “${esc(w.message)}”`;
+    $("ovReply").innerHTML = `<b>WARDEN (${esc(S.model ?? "?")}):</b> “${esc(w?.reply ?? "…")}”`;
+    $("ovMascot").innerHTML = SVG.kandirildi;
+  }
+  $("ovPrize").textContent = mon(S.prize);
+  $("restart").disabled = S.restarting;
+  $("restartLabel").textContent = S.restarting ? "BAŞLATILIYOR…" : "YENİ TUR";
+  $("overlay").classList.add("on");
+}
+
+$("restart").onclick = async () => {
+  $("restart").disabled = true;
+  $("restartLabel").textContent = "BAŞLATILIYOR…";
+  const r = await fetch("/api/restart", { method: "POST" }).then((x) => x.json()).catch(() => ({ ok: false, reason: "bağlantı yok" }));
+  if (!r.ok) {
+    $("ovNote").textContent = `Olmadı: ${r.reason}`;
+    $("restart").disabled = false;
+    $("restartLabel").textContent = "YENİ TUR";
+  }
+};
+
+function render() {
+  if (!S) return;
+  $("scen").hidden = !S.scenario;
+  if (S.scenario) {
+    $("scenName").textContent = S.scenario.name;
+    $("scenTag").textContent = S.scenario.tagline;
+  }
   $("pool").textContent = mon(S.pool);
   $("fee").textContent = mon(S.fee, 4);
-  $("total").textContent = S.total;
+  $("total").textContent = `${S.total} SALDIRI`;
   const left = Math.max(0, S.endTime - Math.floor(Date.now() / 1000 + offset));
-  $("timer").textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
-  $("feed").innerHTML = S.attempts.slice(0, 12).map((a) =>
-    `<div class="att"><span class="who">${short(a.player)}</span> ${esc(a.message)}<br><span class="${a.status}">${LABEL[a.status]} ${esc(a.reply)}</span></div>`).join("");
-  if (!S.cracked) { $("overlay").style.display = "none"; return; }
-  const w = S.attempts.find((a) => a.id === S.winningId);
-  $("overlay").style.display = "block";
-  const body = S.byTimeout
-    ? `<h1 style="color:#fb3">SÜRE DOLDU</h1><p>Kimse kıramadı. ${mon(S.prize)} MON kasada kaldı 🏦</p>`
-    : `<h1>KASA KIRILDI</h1><p>Kazanan: ${esc(S.winner)}</p><p>${mon(S.prize)} MON</p>${w ? `<p>“${esc(w.message)}”</p>` : ""}`;
-  const key = `${S.contract}|${S.restarting}`;
-  if ($("overlay").dataset.key === key) return;
-  $("overlay").dataset.key = key;
-  $("overlay").innerHTML = `${body}<p style="color:#999">Bekçi: ${esc(S.model)}</p>
-    <button id="restart" style="font-size:1em;padding:16px 40px" ${S.restarting ? "disabled" : ""}>${S.restarting ? "Yeni tur başlatılıyor…" : "🔄 Yeni tur"}</button>
-    <p id="rmsg" style="color:#f66"></p>`;
-  $("restart").onclick = async () => {
-    $("restart").disabled = true;
-    $("restart").textContent = "Yeni tur başlatılıyor…";
-    const r = await (await fetch("/api/restart", { method: "POST" })).json();
-    if (!r.ok) $("rmsg").textContent = r.reason;
-    tick();
-  };
+  $("timer").textContent = left ? `${String(Math.floor(left / 60)).padStart(2, "0")}:${String(left % 60).padStart(2, "0")}` : "BİTTİ";
+  $("timer").classList.toggle("low", left > 0 && left <= 30);
+  const pending = S.attempts.filter((a) => a.status === "pending");
+  const waiting = pending.length + playQ.length;
+  $("qcount").textContent = waiting ? `${waiting} saldırı bekliyor` : "Sıra boş — telefonunu çıkar!";
+  $("qlist").innerHTML = [...pending].reverse().slice(0, 3)
+    .map((a) => `<div class="q"><b>${short(a.player)}</b><span>${esc(a.message)}</span></div>`).join("");
 }
-tick();
+
+async function tick() {
+  try {
+    const next = await (await fetch("/api/state")).json();
+    offset = next.now - Date.now() / 1000; // zincir saati - cihaz saati (bu laptop 3 saat ileri)
+    ingest(next);
+    render();
+  } catch {}
+}
+setMood("bekliyor");
+await tick();
 setInterval(tick, 1000);
 </script>
 </body>

@@ -237,7 +237,7 @@ async function judge(r: Round, id: number) {
     console.log(`#${id} jev=${score.toFixed(3)} ${approved ? "AÇILDI" : "red"} | ${reply.slice(0, 100).replace(/\s+/g, " ")}`);
   } catch (e) {
     console.warn(`#${id} vazgeçildi: ${(e as Error).message}`);
-    reply = "Bekçi şu an uyuyor, tekrar dene.";
+    reply = "Warden şu an uyuyor, tekrar dene.";
   }
   reply = [...reply].slice(0, 280).join("");
   await sendTx({
