@@ -1101,7 +1101,7 @@ async function loadLeaderboard() {
     const L = await (await fetch("/api/leaderboard")).json();
     $("podium").innerHTML = [1, 0, 2].map((i) => L.top[i] && { r: L.top[i], i }).filter(Boolean).map(({ r, i }) => {
       const isMe = r.address.toLowerCase() === me.address.toLowerCase(), won = amounts(r.prizes, 2);
-      return `<div class="pod r${i + 1}${isMe ? " me" : ""}"><span class="medal">${["🥇", "🥈", "🥉"][i]}</span><b>${isMe ? "sen" : esc(r.name || short(r.address))}</b><span class="mono">${won === "0" ? `${r.cracked} kırma` : won}</span><div class="pStep">${i + 1}</div></div>`;
+      return `<div class="pod r${i + 1}${isMe ? " me" : ""}"><span class="medal">${["🥇", "🥈", "🥉"][i]}</span><b>${isMe ? "sen" : esc(r.name || short(r.address))}</b><span class="mono">${won === "0" ? `${r.attempts} deneme` : won}</span><div class="pStep">${i + 1}</div></div>`;
     }).join("");
     $("lRows").innerHTML = L.top.map((r, i) => {
       const isMe = r.address.toLowerCase() === me.address.toLowerCase();
