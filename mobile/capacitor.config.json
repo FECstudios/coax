@@ -1,0 +1,14 @@
+{
+  "appId": "xyz.coaxer.app",
+  "appName": "Coaxer",
+  "webDir": "www",
+  "backgroundColor": "#0B1020",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#0B1020"
+  },
+  "plugins": {
+    "SplashScreen": { "launchShowDuration": 500, "backgroundColor": "#0B1020", "showSpinner": false },
+    "StatusBar": { "style": "DARK", "overlaysWebView": true }
+  }
+}

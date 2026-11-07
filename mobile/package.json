@@ -1,0 +1,30 @@
+{
+  "name": "coaxer-mobile",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-web.mjs",
+    "build:safe": "COAX_FLAVOR=safe node scripts/build-web.mjs",
+    "sync": "npm run build && cap sync ios",
+    "sync:safe": "npm run build:safe && cap sync ios",
+    "assets": "capacitor-assets generate --ios --iconBackgroundColor '#0B1020' --splashBackgroundColor '#0B1020' --splashBackgroundColorDark '#0B1020'",
+    "open": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/browser": "8.0.5",
+    "@capacitor/clipboard": "8.0.1",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/haptics": "8.0.2",
+    "@capacitor/ios": "8.6.0",
+    "@capacitor/preferences": "8.0.1",
+    "@capacitor/share": "8.0.3",
+    "@capacitor/splash-screen": "8.0.2",
+    "@capacitor/status-bar": "8.0.4"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "4.0.0",
+    "@capacitor/cli": "8.6.0",
+    "esbuild": "0.28.2",
+    "viem": "2.57.5"
+  }
+}
