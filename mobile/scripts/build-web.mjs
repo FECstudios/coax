@@ -20,8 +20,9 @@ const CSS = `
 header { padding-top: env(safe-area-inset-top); }
 nav.tabs { padding-bottom: env(safe-area-inset-bottom); }
 body.play { padding-top: calc(18px + env(safe-area-inset-top)); padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
+body.play::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top); background: var(--bg); z-index: 50; }
 html[data-flavor="safe"] :is(nav.tabs [data-tab="open"], nav.tabs [data-tab="wallet"], #open, #wallet, #balChip, #addrChip, [data-go="open"],
-  .modes [data-mode="hard"], .feechip, #assetBal, .steps, .card:has(.wallet-row), #wdbox) { display: none !important; }
+  .modes [data-mode="hard"], .feechip, #assetBal, .steps, .card:has(.wallet-row), section:has(> #mine), #wdbox) { display: none !important; }
 html[data-flavor="safe"] nav.tabs, html[data-flavor="safe"] .modes { grid-template-columns: repeat(2, 1fr); }
 `;
 
@@ -39,6 +40,8 @@ for (const name of ["index.html", "play.html"]) {
   if (s.includes("/qr.svg")) s = s.replace(/(["`])\/qr\.svg/g, `$1${API}/qr.svg`);
   s = s.replace(/location\.protocol === "https:"/g, "true");
   if (name === "play.html") s = s.replace("<body>", `<body class="play">`);
+  if (SAFE && name === "play.html") sub(/ Cevabı gör, sonra Zor modda gerçekten dene\./, " Cevabı gör.");
+  if (SAFE && name === "index.html") sub(/Aktif kasa yok\. İlk kasayı sen aç\./, "Aktif kasa yok.");
   s = s.replace("</head>", `<style>${CSS}</style>\n<script src="/native.js"></script>\n</head>`);
   await writeFile(OUT + name, s);
 }
