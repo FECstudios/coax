@@ -102,18 +102,6 @@
   .scroll { overflow-x: auto; }
   .pos { color: var(--green); } .neg { color: var(--red); } .muted { color: var(--muted); }
   @media (max-width: 640px) {
-    .vaultTable { background: none; border: 0; box-shadow: none; padding: 0 !important; overflow: visible; }
-    .vaultTable thead { display: none; }
-    .vaultTable tbody { display: grid; gap: 12px; }
-    .vaultTable tr { display: block; background: var(--card); border: 3px solid var(--ink); border-radius: 16px; box-shadow: 4px 4px 0 var(--ink); padding: 12px 14px; }
-    .vaultTable tr.click { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 12px; transition: transform .15s, box-shadow .15s; }
-    .vaultTable tr.click:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink); }
-    .vaultTable td { display: block; padding: 0; border: 0 !important; text-align: left !important; background: none !important; white-space: normal; }
-    .vaultTable td:first-child { grid-column: 1 / -1; font-weight: 900; font-size: 17px; }
-    .vaultTable td:first-child small { font-weight: 500; font-size: 13px; }
-    .vaultTable td[data-l]::before { content: attr(data-l); display: block; font: 700 10px Rubik, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
-    .vaultTable td.num { font-size: 14px; font-weight: 700; }
-    .vaultTable td:last-child { font-weight: 900; }
     #featured .big { font-size: 46px; }
   }
   .feed > div { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 10px 0 10px 22px; position: relative; border-bottom: 2px dashed var(--line); font-size: 14px; }
@@ -180,10 +168,140 @@
   [hidden] { display: none !important; }
   #toast:empty { display: none; }
   main > section:not([hidden]) { animation: rise .35s ease-out; }
+  .aurora { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .aurora::before, .aurora::after { content: ""; position: absolute; width: 70vmax; height: 70vmax; border-radius: 50%; filter: blur(60px); opacity: .45; animation: drift 22s ease-in-out infinite alternate; }
+  .aurora::before { background: radial-gradient(circle, #8B6CFF, transparent 65%); top: -30vmax; left: -20vmax; }
+  .aurora::after { background: radial-gradient(circle, #FFC93C, transparent 65%); bottom: -40vmax; right: -25vmax; opacity: .22; animation-delay: -8s; }
+  body.light .aurora::before { opacity: .25; } body.light .aurora::after { opacity: .3; }
+  header, main { position: relative; z-index: 1; }
+  header { z-index: 6; }
+  main { overflow-x: clip; }
+  @supports not (overflow: clip) { main { overflow-x: hidden; } }
+  header .wrap { flex-wrap: nowrap; }
+  header .chip { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  @media (max-width: 560px) { header .chip.net { display: none; } .logo { font-size: 20px; } header .chip { font-size: 12px; padding: 4px 9px; } }
+  section > h2::after { content: ""; display: block; width: 46px; height: 6px; margin-top: 7px; border-radius: 99px; background: var(--gold); box-shadow: 2px 2px 0 var(--ink); }
+  @media (max-width: 799px) {
+    nav.tabs { left: 12px; right: 12px; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); padding: 6px; border: 3px solid var(--ink); border-radius: 24px;
+               background: color-mix(in srgb, var(--card) 90%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 4px 4px 0 var(--ink), 0 14px 34px rgba(0,0,0,.4); }
+    nav.tabs button { border-radius: 16px; }
+  }
+
+  .hero { position: relative; display: grid; grid-template-columns: 1.15fr .85fr; gap: 6px 18px; align-items: center; margin-top: 10px; padding: 26px 24px 20px; color: #fff;
+          border: 3px solid var(--ink); border-radius: 28px; box-shadow: 8px 8px 0 var(--ink); overflow: hidden;
+          background: radial-gradient(circle at 82% 22%, rgba(255,201,60,.45), transparent 42%), linear-gradient(145deg, #5B3DE8 0%, #8B6CFF 52%, #C07BFF 100%); }
+  .hero::before { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: radial-gradient(rgba(255,255,255,.16) 1.3px, transparent 1.6px); background-size: 16px 16px; }
+  .heroText { position: relative; z-index: 1; min-width: 0; }
+  .tag { display: inline-flex; align-items: center; gap: 8px; background: var(--ink); color: var(--green); font: 700 12px 'Space Mono', monospace; padding: 5px 12px; border-radius: 999px; }
+  .tag i { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: ping 1.6s ease-out infinite; }
+  .hero h1 { margin: 14px 0 12px; font: 900 clamp(40px, 7vw, 66px)/.98 Rubik, sans-serif; letter-spacing: -.02em; color: #fff; text-shadow: 4px 4px 0 var(--ink); }
+  .hero h1 em { font-style: normal; display: inline-block; color: var(--gold); transform: rotate(-4deg); animation: wiggle 3.6s ease-in-out infinite; }
+  .hero h1 u { text-decoration: none; color: var(--green); padding-bottom: 6px;
+               background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='10' viewBox='0 0 20 10'%3E%3Cpath d='M0 5 Q5 0 10 5 T20 5' fill='none' stroke='%230A0712' stroke-width='3.2'/%3E%3C/svg%3E") repeat-x left bottom / 20px 10px; }
+  .hero p { max-width: 440px; margin: 0 0 18px; font-size: 16px; color: #F2ECFF; }
+  .heroCta { display: flex; flex-wrap: wrap; gap: 10px; }
+  .btn.big { min-height: 54px; padding: 0 18px; font-size: 16px; white-space: nowrap; border-width: 3px; border-radius: 16px; box-shadow: 0 5px 0 var(--ink); }
+  .hero .btn:not(.primary) { background: var(--paper); color: var(--ink); border-color: var(--ink); }
+  .heroArt { position: relative; z-index: 1; height: 270px; }
+  .vaultDoor { position: absolute; left: 50%; top: 50%; width: 230px; height: 230px; margin: -122px 0 0 -115px; border-radius: 50%; border: 4px solid var(--ink); box-shadow: 6px 6px 0 var(--ink);
+               background: radial-gradient(circle, #FFE7A0 0 22%, var(--gold) 23% 56%, #D99A12 57% 60%, var(--gold) 61%); }
+  .vaultDoor::before { content: ""; position: absolute; inset: 16px; border-radius: 50%; opacity: .8; animation: spin 26s linear infinite;
+                       background: repeating-conic-gradient(var(--ink) 0 5deg, transparent 5deg 45deg);
+                       -webkit-mask: radial-gradient(circle, transparent 0 40%, #000 41% 68%, transparent 69%); mask: radial-gradient(circle, transparent 0 40%, #000 41% 68%, transparent 69%); }
+  #heroMascot { position: absolute; left: 50%; bottom: -14px; width: 190px; height: 220px; animation: bobX 3.4s ease-in-out infinite; transform-origin: 50% 100%; }
+  #heroMascot svg, .vMascot svg { width: 100%; height: 100%; display: block; }
+  .coin { position: absolute; width: 32px; height: 32px; border-radius: 50%; border: 3px solid var(--ink); box-shadow: 2px 2px 0 var(--ink); animation: float 4.2s ease-in-out infinite;
+          background: radial-gradient(circle at 35% 30%, #FFF4C4, var(--gold) 45%, #D99A12); }
+  .coin::after { content: ""; position: absolute; inset: 7px; border-radius: 50%; border: 2px solid rgba(10,7,18,.35); }
+  .coin.c1 { top: 8px; left: 4%; } .coin.c2 { top: 26px; right: 2%; width: 24px; height: 24px; animation-delay: -1.4s; } .coin.c3 { bottom: 54px; left: -2%; width: 22px; height: 22px; animation-delay: -2.6s; }
+  .spark { position: absolute; color: #fff; font-size: 22px; text-shadow: 2px 2px 0 var(--ink); animation: twinkle 2.4s ease-in-out infinite; }
+  .spark.s1 { top: 0; left: 38%; } .spark.s2 { bottom: 70px; right: 4%; font-size: 16px; animation-delay: -1.2s; }
+  .stats { grid-column: 1 / -1; position: relative; z-index: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 8px; }
+  .stat { min-width: 0; padding: 10px 12px; border: 2.5px solid var(--ink); border-radius: 16px; background: rgba(10,7,18,.38); }
+  .stat small { display: block; font: 700 10.5px Rubik, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #E4DBFF; }
+  .stat b { display: block; font: 900 26px/1.1 Rubik, sans-serif; color: #fff; overflow-wrap: anywhere; }
+  .stat b#mTvl { font-size: 17px; line-height: 1.5; }
+  @media (max-width: 700px) {
+    .hero { grid-template-columns: 1fr; padding: 18px 18px 16px; border-radius: 24px; box-shadow: 6px 6px 0 var(--ink); }
+    .heroArt { order: -1; height: 180px; margin: -4px 0 0; }
+    .vaultDoor { width: 160px; height: 160px; margin: -86px 0 0 -80px; }
+    #heroMascot { width: 140px; height: 162px; bottom: -18px; }
+    .hero h1 { margin-top: 10px; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .btn.big { flex: 1; }
+  }
+
+  .ticker { margin: 22px -16px 0; overflow: hidden; background: var(--gold); color: var(--ink); border-top: 3px solid var(--ink); border-bottom: 3px solid var(--ink); box-shadow: 0 4px 0 var(--ink); transform: rotate(-1.2deg); }
+  .tickerTrack { display: flex; gap: 34px; width: max-content; padding: 9px 0; font-weight: 800; font-size: 14px; white-space: nowrap; animation: marquee 45s linear infinite; }
+  .tickerTrack span::before { content: "★"; margin-right: 10px; }
+  .tickerTrack em { font-style: normal; font-family: 'Space Mono', monospace; background: var(--ink); color: var(--gold); padding: 1px 7px; border-radius: 7px; margin-left: 4px; }
+  .tickerTrack em.pos { color: var(--green); }
+  .ticker:hover .tickerTrack { animation-play-state: paused; }
+
+  .secHead { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .secHead h2::after { content: ""; display: block; width: 46px; height: 6px; margin-top: 7px; border-radius: 99px; background: var(--gold); box-shadow: 2px 2px 0 var(--ink); }
+  .secHead span { font-weight: 700; font-size: 13px; }
+  .vgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 18px; }
+  .vcard { --tc: var(--purple); position: relative; display: flex; flex-direction: column; gap: 12px; padding-bottom: 14px; color: var(--text); text-decoration: none; background: var(--card);
+           border: 3px solid var(--ink); border-radius: 20px; box-shadow: 5px 5px 0 var(--ink); overflow: hidden; transition: transform .2s cubic-bezier(.3,1.6,.5,1), box-shadow .2s; }
+  .vcard:hover { transform: translate(-2px, -3px) rotate(-.6deg); box-shadow: 8px 9px 0 var(--ink); }
+  .vcard:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink); }
+  .vcard.t2 { --tc: var(--gold); } .vcard.t3 { --tc: var(--orange); } .vcard.t4 { --tc: var(--pink); } .vcard.t5 { --tc: var(--red); }
+  .vTop { display: flex; align-items: center; gap: 6px; padding: 10px 14px; background: var(--tc); color: var(--ink); border-bottom: 3px solid var(--ink); }
+  .vId { font: 900 18px Rubik, sans-serif; margin-right: 2px; }
+  .vTop .badge { background: var(--paper); color: var(--ink); }
+  .vStatus { margin-left: auto; padding: 3px 9px; border-radius: 999px; background: var(--ink); color: var(--green); font: 800 11px Rubik, sans-serif; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+  .vStatus.neg { color: #FF8A95; } .vStatus.muted { color: #C9BFE6; }
+  .vBody { display: flex; align-items: flex-end; gap: 8px; padding: 0 14px; }
+  .vBody > div:first-child { flex: 1; min-width: 0; }
+  .vBody small, .vStats small { display: block; font: 700 10.5px Rubik, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .vPool { margin: 3px 0 6px; font: 900 34px/1 Rubik, sans-serif; overflow-wrap: anywhere; }
+  .vPool span { font-size: 15px; color: var(--muted); }
+  .vName { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vMascot { flex: none; width: 74px; height: 86px; margin-bottom: -4px; transition: transform .25s cubic-bezier(.3,1.6,.5,1); }
+  .vcard:hover .vMascot { transform: rotate(-6deg) scale(1.08); }
+  .vStats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 14px; padding: 10px 0; border-top: 2px dashed var(--line); border-bottom: 2px dashed var(--line); }
+  .vStats b { display: block; font: 700 14px 'Space Mono', monospace; }
+  .vFoot { display: flex; align-items: center; gap: 12px; padding: 0 14px; }
+  .vBar { flex: 1; height: 12px; border-radius: 99px; background: var(--card2); border: 2px solid var(--ink); overflow: hidden; }
+  .vBar i { display: block; height: 100%; background: var(--tc); border-right: 2px solid var(--ink); }
+  .vCta { flex: none; padding: 7px 14px; border-radius: 12px; border: 2.5px solid var(--ink); box-shadow: 0 3px 0 var(--ink); background: var(--gold); color: var(--ink); font-weight: 900; font-size: 14px; }
+  .vcard.done .vCta { background: var(--paper); }
+  .vEmpty { text-align: center; color: var(--muted); font-weight: 700; padding: 28px 16px; }
+
+  .bankCard { position: relative; overflow: hidden; color: #fff; background: linear-gradient(140deg, #5B3DE8, #8B6CFF 55%, #C07BFF) !important; box-shadow: 6px 6px 0 var(--ink); }
+  .bankCard::before { content: ""; position: absolute; right: -60px; top: -60px; width: 200px; height: 200px; border-radius: 50%; border: 26px solid rgba(255,255,255,.12); pointer-events: none; }
+  .bankCard .muted { color: #E4DBFF; }
+  .bankCard #wTotal { text-shadow: 3px 3px 0 var(--ink); }
+
+  .lvlBox { flex-basis: 100%; display: grid; gap: 6px; }
+  .lvlRow { display: flex; align-items: center; gap: 10px; }
+  .lvl { background: var(--gold); color: var(--ink); border: 2.5px solid var(--ink); box-shadow: 2px 2px 0 var(--ink); border-radius: 10px; padding: 2px 9px; font: 900 13px Rubik, sans-serif; transform: rotate(-3deg); }
+  .lvlRow b { font-weight: 900; }
+  .lvlRow .mono { margin-left: auto; font-size: 12px; }
+  .xp { height: 14px; border-radius: 99px; background: rgba(10,7,18,.4); border: 2.5px solid var(--ink); overflow: hidden; }
+  .xp i { display: block; height: 100%; width: 0; background: repeating-linear-gradient(-45deg, var(--green) 0 10px, #2BC98F 10px 20px); border-right: 2px solid var(--ink); transition: width .8s cubic-bezier(.2,.8,.2,1); }
+  .podium { display: grid; grid-template-columns: repeat(3, 1fr); align-items: end; gap: 10px; margin-bottom: 14px; }
+  .pod { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; text-align: center; }
+  .pod .medal { font-size: 30px; line-height: 1; }
+  .pod b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+  .pod .mono { font-size: 12px; color: var(--muted); }
+  .pStep { width: 100%; display: grid; place-items: center; border: 3px solid var(--ink); border-radius: 14px 14px 6px 6px; box-shadow: 3px 3px 0 var(--ink); font: 900 30px Rubik, sans-serif; color: var(--ink); }
+  .pod.r1 .pStep { height: 96px; background: var(--gold); } .pod.r2 .pStep { height: 70px; background: var(--paper); } .pod.r3 .pStep { height: 54px; background: var(--orange); }
+  .pod.me b { color: var(--gold); }
+
+  @keyframes drift { to { transform: translate(12vmax, 8vmax) scale(1.1); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes bobX { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-8px) rotate(-2deg); } }
+  @keyframes float { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-12px) rotate(14deg); } }
+  @keyframes twinkle { 0%, 100% { opacity: 1; transform: scale(1) rotate(0); } 50% { opacity: .3; transform: scale(.6) rotate(45deg); } }
+  @keyframes ping { 0% { box-shadow: 0 0 0 0 rgba(62,230,168,.7); } 100% { box-shadow: 0 0 0 9px rgba(62,230,168,0); } }
+  @keyframes wiggle { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(2deg) scale(1.04); } }
+  @keyframes marquee { to { transform: translateX(-50%); } }
   @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
   @keyframes pop { from { opacity: 0; transform: scale(.94) rotate(-1deg); } }
   @keyframes bob { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-5px) rotate(-2deg); } }
-  @media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
   body.light { --bg: #FFF1D6; --card: #FFFFFF; --card2: #F1E8FF; --line: #E2D6BE; --paper: #FFF8EA; --text: #0A0712; --muted: #5E5379; --green: #0B8A5F; --red: #F0495A; --dot: #EEDDB8; }
   body.light h2, body.light .logo, body.light #pName { text-shadow: none; }
   body.light .tbl tr.click:hover td { background: #FFF6E0; }
@@ -195,6 +313,7 @@
 </style>
 </head>
 <body>
+<div class="aurora" aria-hidden="true"></div>
 <header><div class="wrap">
   <a class="logo" href="/"><span class="logo-box"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0A0712" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 7.5-2"></path><circle cx="12" cy="15.5" r="1.5"></circle></svg></span>COAXER</a>
   <span class="chip net">● Monad Testnet</span>
@@ -212,23 +331,31 @@
   <p id="toast" class="card" role="status"></p>
 
   <section id="explore">
-    <div class="grid4" style="margin-top: 8px">
-      <div class="card metric"><small>Toplam kilitli değer</small><b id="mTvl" style="font-size: 16px">…</b></div>
-      <div class="card metric"><small>Aktif kasa</small><b id="mActive">…</b></div>
-      <div class="card metric"><small>Son 24 saatte deneme</small><b id="mAtt">…</b></div>
-      <div class="card metric"><small>Son 24 saatte kırılan</small><b id="mCracked">…</b></div>
+    <div class="hero">
+      <div class="heroText">
+        <span class="tag"><i></i>Monad Testnet · canlı</span>
+        <h1>Bekçiyi <em>kandır</em>,<br>kasayı <u>kap</u>.</h1>
+        <p>Yapay zekâ bekçiyi tek mesajla ikna et. Pratikte ücretsiz ısın, kasayı kırarsan havuz senin.</p>
+        <div class="heroCta"><a class="btn primary big" id="heroPlay" href="#kasalar">Hemen dene →</a><button class="btn big" data-go="open" type="button">Kasa aç</button></div>
+      </div>
+      <div class="heroArt" aria-hidden="true"><div class="vaultDoor"></div><div id="heroMascot"></div><span class="coin c1"></span><span class="coin c2"></span><span class="coin c3"></span><span class="spark s1">✦</span><span class="spark s2">✦</span></div>
+      <div class="stats">
+        <div class="stat"><small>Toplam kilitli değer</small><b id="mTvl">…</b></div>
+        <div class="stat"><small>Aktif kasa</small><b id="mActive">…</b></div>
+        <div class="stat"><small>Son 24 saatte deneme</small><b id="mAtt">…</b></div>
+        <div class="stat"><small>Son 24 saatte kırılan</small><b id="mCracked">…</b></div>
+      </div>
     </div>
+    <div class="ticker" id="tickerWrap" hidden><div class="tickerTrack" id="ticker"></div></div>
     <h2>Öne çıkan kasa</h2>
     <div id="featured" class="card featured"><div class="fInfo"><small>ÖNE ÇIKAN KASA</small><span class="fEmpty">Aktif kasa yok. İlk kasayı sen aç.</span></div></div>
-    <h2>Kasalar</h2>
+    <div class="secHead" id="kasalar"><h2>Kasalar</h2><span class="muted" id="vCount"></span></div>
     <div class="filters">
       <label class="f">Seviye<select id="fTier"><option value="">Tümü</option><option value="1">Orta</option><option value="2">Yüksek</option></select></label>
       <label class="f">Durum<select id="fStatus"><option value="active">Aktif</option><option value="ending">Bitmek üzere</option><option value="all">Tümü</option></select></label>
       <label class="f">Sırala<select id="fSort"><option value="pool">Havuz</option><option value="time">Kalan süre</option><option value="new">Yeni</option></select></label>
     </div>
-    <div class="card scroll vaultTable" style="padding: 4px 8px">
-      <table class="tbl"><thead><tr><th>Kasa</th><th class="num">Havuz</th><th class="num">Deneme ücreti</th><th class="num">Deneme</th><th class="num">Kalan</th><th>Durum</th></tr></thead><tbody id="vaultRows"></tbody></table>
-    </div>
+    <div class="vgrid" id="vaultGrid"></div>
     <h2>Son olaylar</h2>
     <div class="card feed" id="feed"><span class="muted">Henüz olay yok.</span></div>
   </section>
@@ -294,7 +421,7 @@
         <small class="muted" id="linkMsg" style="display: block; margin-top: 6px">Adresi profilinde saklarız; dilersen tarayıcı cüzdanından izin isteyip aynı hesabı doğrularız.</small>
       </details>
     </div>
-    <div class="card" style="margin-top: 8px">
+    <div class="card bankCard" style="margin-top: 8px">
       <small class="muted">Toplam bakiye</small>
       <div class="mono" style="font-size: 34px"><span id="wTotal">…</span> <span class="muted" style="font-size: 18px">MON</span></div>
       <small class="muted">Kullanılabilir MON (diğer varlıklar aşağıda)</small>
@@ -379,6 +506,7 @@
         <button class="btn" id="pEditToggle" type="button">Profili düzenle</button>
         <button class="btn" id="pShare" type="button">Profili paylaş</button>
       </div>
+      <div class="lvlBox"><div class="lvlRow"><span class="lvl" id="pLevel">Sv. 1</span><b id="pTitle">Çaylak</b><span class="mono" id="pXpTxt">0 / 100 XP</span></div><div class="xp"><i id="pXp"></i></div></div>
     </div>
     <div class="card" id="pEdit" hidden style="margin-top: 8px; display: grid; gap: 10px">
       <div class="grid4">
@@ -422,6 +550,7 @@
     </div>
 
     <h2>Liderlik tablosu</h2>
+    <div class="podium" id="podium"></div>
     <div class="card scroll" style="padding: 4px 8px">
       <table class="tbl"><thead><tr><th>#</th><th>Oyuncu</th><th class="num">Ödül</th><th class="num">Kırılan</th><th class="num">Deneme</th></tr></thead><tbody id="lRows"><tr><td colspan="5" class="muted">Yükleniyor…</td></tr></tbody></table>
     </div>
@@ -675,6 +804,7 @@ const fmtLeft = (s) => (s <= 0 ? "bitti" : s >= 3600 ? `${Math.floor(s / 3600)}s
 const status = (v) => (v.settled ? (v.byTimeout ? "Dayandı" : "Kırıldı") : left(v) <= 0 ? "Sonuçlanıyor" : left(v) < 600 ? "Bitmek üzere" : "Aktif");
 const hostName = (v) => (v.live ? "Canlı tur" : short(v.host));
 const ago = (t) => { const s = nowS() - t; return s < 60 ? "az önce" : s < 3600 ? `${Math.floor(s / 60)} dk önce` : s < 86400 ? `${Math.floor(s / 3600)} sa önce` : new Date(t * 1000).toLocaleDateString("tr-TR"); };
+let lastGrid = "", lastTick = "";
 function renderExplore() {
   $("mTvl").textContent = amounts(V.stats.tvl, 2);
   $("mActive").textContent = V.stats.active;
@@ -691,11 +821,20 @@ function renderExplore() {
   if (st === "ending") list = list.filter((v) => !v.settled && left(v) > 0 && left(v) < 600);
   const so = $("fSort").value;
   list.sort((a, b) => (so === "pool" ? Number(BigInt(b.pool) - BigInt(a.pool)) : so === "time" ? left(a) - left(b) : b.id - a.id));
-  $("vaultRows").innerHTML = list.map((v) => {
-    const a = assetOf(v.asset);
-    return `<tr class="click" data-v="${v.id}"><td>#${v.id} ${esc(hostName(v))} <span class="badge ${tcls(v.tier)}">${TIER[v.tier]}</span> <span class="badge">${esc(v.assetSymbol)}</span><br><small class="muted">${esc(v.scenario?.name ?? "")}</small></td><td class="num" data-l="Havuz">${fmtA(v.settled ? v.prize : v.pool, a)} ${esc(v.assetSymbol)}</td><td class="num" data-l="Ücret">${fmtA(v.fee, a)} ${esc(v.assetSymbol)}</td><td class="num" data-l="Deneme">${v.attempts}</td><td class="num" data-l="Kalan">${v.settled ? "—" : fmtLeft(left(v))}</td><td data-l="Durum" class="${v.settled && !v.byTimeout ? "neg" : v.settled ? "muted" : "pos"}">${status(v)}</td></tr>`;
-  }).join("") || `<tr><td colspan="6" class="muted">Bu filtrede kasa yok.</td></tr>`;
-  for (const tr of document.querySelectorAll("#vaultRows tr.click")) tr.onclick = () => (location.href = `/play.html?v=${tr.dataset.v}`);
+  $("vCount").textContent = `${list.length} kasa`;
+  const grid = list.map((v) => {
+    const a = assetOf(v.asset), done = v.settled || left(v) <= 0;
+    const pct = v.settled ? 100 : Math.min(100, Math.max(0, ((nowS() - v.openedAt) / Math.max(1, v.endsAt - v.openedAt)) * 100));
+    const mood = v.settled ? (v.byTimeout ? "reddetti" : "kandirildi") : "bekliyor";
+    const sc = v.settled && !v.byTimeout ? "neg" : v.settled ? "muted" : "";
+    return `<a class="vcard t${v.tier}${done ? " done" : ""}" href="/play.html?v=${v.id}"><div class="vTop"><span class="vId">#${v.id}</span><span class="badge">${TIER[v.tier]}</span><span class="badge">${esc(v.assetSymbol)}</span><span class="vStatus ${sc}">${status(v)}</span></div><div class="vBody"><div><small>${v.settled ? "Sonuç" : "Havuz"}</small><div class="vPool">${fmtA(v.settled ? v.prize : v.pool, a)} <span>${esc(v.assetSymbol)}</span></div><div class="vName">${esc(v.scenario?.name ?? "")} · ${esc(hostName(v))}</div></div><div class="vMascot">${bekciSVG(mood)}</div></div><div class="vStats"><div><small>Ücret</small><b>${fmtA(v.fee, a)}</b></div><div><small>Deneme</small><b>${v.attempts}</b></div><div><small>Kalan</small><b>${v.settled ? "—" : fmtLeft(left(v))}</b></div></div><div class="vFoot"><div class="vBar"><i style="width:${pct.toFixed(1)}%"></i></div><span class="vCta">${done ? "Sonucu gör" : "Dene"} →</span></div></a>`;
+  }).join("") || `<div class="card vEmpty">Bu filtrede kasa yok.</div>`;
+  if (grid !== lastGrid) $("vaultGrid").innerHTML = lastGrid = grid;
+  const pick = top ?? V.vaults[0];
+  $("heroPlay").href = pick ? `/play.html?v=${pick.id}` : "#kasalar";
+  const tick = V.events.slice(0, 12).map((e) => `<span><b>${esc(e.whoName || short(e.who))}</b> ${e.kind === "cracked" ? `#${e.vault} kasasını kırdı` : `#${e.vault} kasası dayandı`}<em class="${e.kind === "cracked" ? "pos" : ""}">+${fmt(e.amount, assetOf(e.asset))} ${esc(e.assetSymbol)}</em></span>`).join("");
+  $("tickerWrap").hidden = !tick;
+  if (tick && tick !== lastTick) $("ticker").innerHTML = (lastTick = tick) + tick;
   $("feed").innerHTML = V.events.map((e) => `<div><span class="mono">${e.kind === "cracked" ? short(e.who) : `#${e.vault}`}</span><span>${e.kind === "cracked" ? `#${e.vault} kasasını kırdı` : "kasası dayandı · host"}</span><span class="mono ${e.kind === "cracked" ? "pos" : ""}">+${fmt(e.amount, assetOf(e.asset))} ${esc(e.assetSymbol)}</span><span class="muted">${e.time ? ago(e.time) : ""}</span><a href="${V.explorerTx}${e.tx}" target="_blank" rel="noopener">↗</a></div>`).join("") || `<span class="muted">Henüz olay yok.</span>`;
 }
 for (const id of ["fTier", "fStatus", "fSort"]) $(id).onchange = renderExplore;
@@ -929,6 +1068,11 @@ function renderProfile() {
   $("pCracked").textContent = crackedList.length;
   $("pBest").textContent = amounts(bestBy, 4);
   $("pHosted").textContent = hosted.length;
+  const xp = mine.length * 10 + crackedList.length * 150 + hosted.length * 40, lvl = Math.floor(xp / 100) + 1;
+  $("pLevel").textContent = `Sv. ${lvl}`;
+  $("pTitle").textContent = ["Çaylak", "Meraklı", "İkna Çırağı", "Laf Ustası", "Kasa Avcısı", "Efsane Kandırıcı"][Math.min(lvl - 1, 5)];
+  $("pXpTxt").textContent = `${xp % 100} / 100 XP`;
+  $("pXp").style.width = `${xp % 100}%`;
   const defs = [
     { ico: "👣", name: "İlk Temas", on: mine.length >= 1 },
     { ico: "🔓", name: "Kırıcı", on: crackedList.length >= 1 },
@@ -955,6 +1099,10 @@ function renderProfile() {
 async function loadLeaderboard() {
   try {
     const L = await (await fetch("/api/leaderboard")).json();
+    $("podium").innerHTML = [1, 0, 2].map((i) => L.top[i] && { r: L.top[i], i }).filter(Boolean).map(({ r, i }) => {
+      const isMe = r.address.toLowerCase() === me.address.toLowerCase(), won = amounts(r.prizes, 2);
+      return `<div class="pod r${i + 1}${isMe ? " me" : ""}"><span class="medal">${["🥇", "🥈", "🥉"][i]}</span><b>${isMe ? "sen" : esc(r.name || short(r.address))}</b><span class="mono">${won === "0" ? `${r.cracked} kırma` : won}</span><div class="pStep">${i + 1}</div></div>`;
+    }).join("");
     $("lRows").innerHTML = L.top.map((r, i) => {
       const isMe = r.address.toLowerCase() === me.address.toLowerCase();
       const won = amounts(r.prizes, 2);
@@ -1184,6 +1332,12 @@ if (new URLSearchParams(location.search).has("wallet") && window.ethereum) { if 
 else if (store.get("kasa-mode") === "injected" && !(await useInjected(false).catch(() => false))) useBurner();
 renderExplore();
 renderTiers();
+{
+  const moods = ["bekliyor", "konusuyor", "dusunuyor", "kandirildi", "reddetti"];
+  let m = 0;
+  $("heroMascot").innerHTML = bekciSVG(moods[0]);
+  setInterval(() => { if (!$("explore").hidden && !document.hidden) $("heroMascot").innerHTML = bekciSVG(moods[(m = (m + 1) % moods.length)]); }, 3200);
+}
 go(["open", "wallet", "profile"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "explore");
 async function refreshVaults() {
   V = await (await fetch("/api/vaults")).json();
