@@ -95,6 +95,23 @@
   .presult.ok { background: var(--mint); color: var(--ink); }
   .presult.no { background: #3A2C4E; color: var(--text); }
   footer { font-size: 12px; color: var(--muted); text-align: center; line-height: 1.5; }
+  .note { animation: drop .5s cubic-bezier(.3,1.6,.5,1) both; }
+  #mascot { animation: bob 3.2s ease-in-out infinite; transform-origin: 50% 100%; }
+  .live i { animation: pulse 1.4s ease-in-out infinite; }
+  #send { transition: transform .12s, box-shadow .12s, filter .12s; }
+  #send:not(:disabled):hover { filter: brightness(1.05); transform: translateY(-2px); box-shadow: 0 8px 0 var(--ink); }
+  .modes button { transition: background .2s, color .2s, transform .2s; }
+  .modes button:active { transform: scale(.95); }
+  .btn2, .copy { transition: transform .12s, box-shadow .12s; }
+  .btn2:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+  .copy:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--ink); }
+  textarea:focus, input:focus { outline: none; box-shadow: 4px 4px 0 var(--purple); }
+  .att, .presult, .over { animation: pop .35s cubic-bezier(.3,1.6,.5,1) both; }
+  @keyframes drop { from { opacity: 0; transform: translateY(-14px) rotate(-4deg); } }
+  @keyframes pop { from { opacity: 0; transform: scale(.94); } }
+  @keyframes bob { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-4px) rotate(-2deg); } }
+  @keyframes pulse { 50% { opacity: .35; transform: scale(.7); } }
+  @media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>

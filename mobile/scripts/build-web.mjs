@@ -18,7 +18,6 @@ await build({ ...common, entryPoints: [here("../src/native.js")], format: "iife"
 
 const CSS = `
 header { padding-top: env(safe-area-inset-top); }
-nav.tabs { padding-bottom: env(safe-area-inset-bottom); }
 body.play { padding-top: calc(18px + env(safe-area-inset-top)); padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
 body.play::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top); background: var(--bg); z-index: 50; }
 html[data-flavor="safe"] :is(nav.tabs [data-tab="open"], nav.tabs [data-tab="wallet"], #open, #wallet, #balChip, #addrChip, [data-go="open"],
@@ -42,6 +41,7 @@ for (const name of ["index.html", "play.html"]) {
   if (name === "play.html") s = s.replace("<body>", `<body class="play">`);
   if (SAFE && name === "play.html") sub(/ Cevabı gör, sonra Zor modda gerçekten dene\./, " Cevabı gör.");
   if (SAFE && name === "index.html") sub(/Aktif kasa yok\. İlk kasayı sen aç\./, "Aktif kasa yok.");
+  if (SAFE && name === "index.html") sub(/Pratikte ücretsiz ısın, kasayı kırarsan havuz senin\./, "Pratik modda ücretsiz dene, ajanları canlı izle.");
   s = s.replace("</head>", `<style>${CSS}</style>\n<script src="/native.js"></script>\n</head>`);
   await writeFile(OUT + name, s);
 }
